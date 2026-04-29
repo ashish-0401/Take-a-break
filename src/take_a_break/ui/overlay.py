@@ -136,6 +136,14 @@ class CatWindow(QWidget):
             movie.setSpeed(cfg.GIF_SPEED_PERCENT)
             # Cache frames so QMovie doesn't redecode the GIF on every loop.
             movie.setCacheMode(QMovie.CacheMode.CacheAll)
+
+            # Some GIFs declare loopCount=1 in their metadata, which makes
+            # QMovie stop on the last frame. Force a manual restart instead.
+            def _loop(frame_index: int, m=movie):
+                if frame_index == m.frameCount() - 1:
+                    QTimer.singleShot(int(m.nextFrameDelay()), m.start)
+            movie.frameChanged.connect(_loop)
+
             movie.start()
             self._movie = movie
         else:
