@@ -17,12 +17,16 @@ from pathlib import Path
 def _resource_root() -> Path:
     """Where bundled assets live (works for source run AND PyInstaller exe)."""
     if getattr(sys, "frozen", False):
-        # PyInstaller: assets are next to the exe in a ``_internal`` dir
-        # or extracted to ``sys._MEIPASS`` for one-file builds.
+        # PyInstaller --onefile: extracted to sys._MEIPASS
         meipass = getattr(sys, "_MEIPASS", None)
         if meipass:
             return Path(meipass)
-        return Path(sys.executable).parent
+        # PyInstaller --onedir: assets go into "_internal/assets" (PyInstaller 6+)
+        # or directly next to the exe (older versions). Check both.
+        exe_dir = Path(sys.executable).parent
+        if (exe_dir / "_internal" / "assets").is_dir():
+            return exe_dir / "_internal"
+        return exe_dir
     # Source checkout: <repo>/assets — config is now at src/take_a_break/core/config.py
     return Path(__file__).resolve().parent.parent.parent.parent
 

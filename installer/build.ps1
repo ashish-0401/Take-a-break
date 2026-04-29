@@ -10,7 +10,13 @@ try {
     if (Test-Path build) { Remove-Item build -Recurse -Force }
     if (Test-Path dist)  { Remove-Item dist  -Recurse -Force }
 
-    python -m PyInstaller installer\take-a-break.spec --clean --noconfirm
+    # PyInstaller writes progress to stderr — don't let that abort the script.
+    $ErrorActionPreference = "Continue"
+    python -m PyInstaller installer\take-a-break.spec --clean --noconfirm 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        throw "PyInstaller failed with exit code $LASTEXITCODE"
+    }
+    $ErrorActionPreference = "Stop"
 
     # Find ISCC.exe (works for both system-wide and per-user installs)
     $iscc = Get-ChildItem "$env:LOCALAPPDATA\Programs", "C:\Program Files*" `
