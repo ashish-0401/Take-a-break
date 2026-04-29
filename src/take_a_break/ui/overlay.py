@@ -13,7 +13,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import (
-    QGuiApplication, QMovie, QPixmap, QColor, QPainter, QKeyEvent, QCursor,
+    QGuiApplication, QImageReader, QPixmap, QColor, QPainter, QKeyEvent, QCursor,
 )
 from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QFrame,
@@ -98,7 +98,9 @@ class BlockerWindow(QWidget):
 
 
 # ============================================================
-# Cat — plays the walking GIF natively via QMovie.
+# Cat — plays the walking GIF by manually cycling pre-decoded frames.
+# (More reliable than QMovie, which honours embedded loopCount metadata
+# and stops on the last frame for some GIFs.)
 # ============================================================
 class CatWindow(QWidget):
     def __init__(self, screen):
@@ -123,29 +125,53 @@ class CatWindow(QWidget):
 
         gif = Path(cfg.WALK_GIF)
         if gif.exists():
-            movie = QMovie(str(gif))
-            # Determine target size from first frame so we can fit fully.
-            movie.jumpToFrame(0)
-            src = movie.currentImage().size()
-            if src.isValid() and src.width() > 0:
-                scale = min(avail.width() / src.width(), avail.height() / src.height())
-                target = QSize(int(src.width() * scale), int(src.height() * scale))
-                movie.setScaledSize(target)
-                self._label.setFixedSize(target)
-            self._label.setMovie(movie)
-            movie.setSpeed(cfg.GIF_SPEED_PERCENT)
-            # Cache frames so QMovie doesn't redecode the GIF on every loop.
-            movie.setCacheMode(QMovie.CacheMode.CacheAll)
+            # Decode every GIF frame into a QPixmap once, then cycle them
+            # manually via QTimer.
+            reader = QImageReader(str(gif))
+            reader.setDecideFormatFromContent(True)
 
-            # Some GIFs declare loopCount=1 in their metadata, which makes
-            # QMovie stop on the last frame. Force a manual restart instead.
-            def _loop(frame_index: int, m=movie):
-                if frame_index == m.frameCount() - 1:
-                    QTimer.singleShot(int(m.nextFrameDelay()), m.start)
-            movie.frameChanged.connect(_loop)
+            frames: list[QPixmap] = []
+            delays: list[int] = []  # ms per frame
+            scaled_size: QSize | None = None
+            while reader.canRead():
+                img = reader.read()
+                if img.isNull():
+                    break
+                if scaled_size is None and img.width() > 0:
+                    scale = min(avail.width() / img.width(), avail.height() / img.height())
+                    scaled_size = QSize(int(img.width() * scale), int(img.height() * scale))
+                pix = QPixmap.fromImage(img)
+                if scaled_size is not None:
+                    pix = pix.scaled(
+                        scaled_size,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                frames.append(pix)
+                # nextImageDelay() returns ms for the frame just read.
+                delays.append(max(20, reader.nextImageDelay() or 100))
 
-            movie.start()
-            self._movie = movie
+            if frames:
+                if scaled_size is not None:
+                    self._label.setFixedSize(scaled_size)
+                self._label.setPixmap(frames[0])
+
+                # Cycle through frames with a single-shot timer per frame so
+                # variable inter-frame delays are honoured.
+                self._frames = frames
+                self._delays = delays
+                self._frame_idx = 0
+                speed = max(1, cfg.GIF_SPEED_PERCENT) / 100.0
+
+                def _advance():
+                    self._frame_idx = (self._frame_idx + 1) % len(self._frames)
+                    self._label.setPixmap(self._frames[self._frame_idx])
+                    QTimer.singleShot(
+                        int(self._delays[self._frame_idx] / speed),
+                        _advance,
+                    )
+
+                QTimer.singleShot(int(delays[0] / speed), _advance)
         else:
             # Fallback: still PNG
             still = Path(cfg.IMAGE_PATH)
