@@ -5,7 +5,7 @@
 #define AppName     "Take a Break"
 #define AppId       "{{8E4F2C30-7A1E-4D0A-9F44-CA1234567890}"
 #define AppVersion  "1.0.0"
-#define AppPublisher "Your Name"
+#define AppPublisher "Ashish Jaiswal"
 #define AppExeName  "take-a-break.exe"
 
 [Setup]

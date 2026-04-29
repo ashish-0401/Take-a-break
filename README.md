@@ -130,3 +130,9 @@ git tag v1.0.0
 git push origin v1.0.0
 # Installer appears at: https://github.com/ashish-0401/Take-a-break/releases/latest
 ```
+
+---
+
+## License
+
+[MIT](LICENSE) — do whatever you want with it.
