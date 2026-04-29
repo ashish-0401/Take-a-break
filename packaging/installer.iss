@@ -55,33 +55,61 @@ Type: filesandordirs; Name: "{userappdata}\take-a-break"
 [Code]
 var
   SettingsPage: TInputQueryWizardPage;
+  DaysPage: TWizardPage;
+  DayChecks: array[0..6] of TCheckBox;
 
 procedure InitializeWizard;
+var
+  DayNames: array[0..6] of String;
+  i: Integer;
+  lbl: TLabel;
 begin
+  // Page 1: interval + work hours
   SettingsPage := CreateInputQueryPage(
     wpSelectTasks,
-    'Reminder Settings',
-    'Customize your break reminders',
-    'You can change these later by editing %APPDATA%\take-a-break\config.json'
+    'Break Settings',
+    'Set up your break schedule',
+    'You can change these anytime from the tray icon → Settings.'
   );
   SettingsPage.Add('Interval (minutes between breaks):', False);
-  SettingsPage.Add('Work start hour (0-23):', False);
-  SettingsPage.Add('Work end hour (0-23):', False);
-  SettingsPage.Add('Title message:', False);
-  SettingsPage.Add('Sub message:', False);
-
-  // Defaults
+  SettingsPage.Add('Work start hour (0–23):', False);
+  SettingsPage.Add('Work end hour (1–24):', False);
   SettingsPage.Values[0] := '30';
   SettingsPage.Values[1] := '9';
   SettingsPage.Values[2] := '18';
-  SettingsPage.Values[3] := 'I see you!';
-  SettingsPage.Values[4] := 'Get up. Look out the window. Drink some water.';
+
+  // Page 2: work days checkboxes
+  DaysPage := CreateCustomPage(
+    SettingsPage.ID,
+    'Active Days',
+    'Breaks only fire on the days you check.'
+  );
+
+  DayNames[0] := 'Monday';
+  DayNames[1] := 'Tuesday';
+  DayNames[2] := 'Wednesday';
+  DayNames[3] := 'Thursday';
+  DayNames[4] := 'Friday';
+  DayNames[5] := 'Saturday';
+  DayNames[6] := 'Sunday';
+
+  for i := 0 to 6 do
+  begin
+    DayChecks[i] := TCheckBox.Create(DaysPage);
+    DayChecks[i].Parent := DaysPage.Surface;
+    DayChecks[i].Caption := DayNames[i];
+    DayChecks[i].Left := 0;
+    DayChecks[i].Top := i * 28;
+    DayChecks[i].Width := 200;
+    DayChecks[i].Checked := (i <= 4); // Mon-Fri default
+  end;
 end;
 
 function WriteUserConfig(): Boolean;
 var
-  Dir, Path, S: string;
-  Interval, StartH, EndH: Integer;
+  Dir, Path, DayList, S: string;
+  Interval, StartH, EndH, i: Integer;
+  First: Boolean;
 begin
   Result := True;
   Dir := ExpandConstant('{userappdata}\take-a-break');
@@ -92,12 +120,24 @@ begin
   StartH   := StrToIntDef(SettingsPage.Values[1], 9);
   EndH     := StrToIntDef(SettingsPage.Values[2], 18);
 
+  // Build WORK_DAYS array
+  DayList := '';
+  First := True;
+  for i := 0 to 6 do
+  begin
+    if DayChecks[i].Checked then
+    begin
+      if not First then DayList := DayList + ', ';
+      DayList := DayList + IntToStr(i);
+      First := False;
+    end;
+  end;
+
   S := '{' + #13#10 +
        '  "INTERVAL_MS": ' + IntToStr(Interval * 60 * 1000) + ',' + #13#10 +
        '  "WORK_START_HOUR": ' + IntToStr(StartH) + ',' + #13#10 +
        '  "WORK_END_HOUR": ' + IntToStr(EndH) + ',' + #13#10 +
-       '  "MESSAGE": "' + SettingsPage.Values[3] + '",' + #13#10 +
-       '  "SUBMESSAGE": "' + SettingsPage.Values[4] + '"' + #13#10 +
+       '  "WORK_DAYS": [' + DayList + ']' + #13#10 +
        '}' + #13#10;
 
   if not SaveStringToFile(Path, S, False) then

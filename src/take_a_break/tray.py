@@ -8,6 +8,7 @@ from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from . import config as cfg
+from .settings_window import open_settings
 from .state import STATE
 
 
@@ -29,7 +30,7 @@ def _build_icon() -> QIcon:
     return QIcon(pix)
 
 
-def build(trigger: Callable[[], None]) -> QSystemTrayIcon:
+def build(trigger: Callable[[], None], on_settings_saved: Callable[[], None] | None = None) -> QSystemTrayIcon:
     app = QApplication.instance()
     icon = QSystemTrayIcon(_build_icon(), parent=app)
     icon.setToolTip("Take a break")
@@ -43,6 +44,9 @@ def build(trigger: Callable[[], None]) -> QSystemTrayIcon:
     pause_action = QAction("Pause", menu)
     pause_action.triggered.connect(toggle_pause)
 
+    settings_action = QAction("Settings…", menu)
+    settings_action.triggered.connect(lambda: open_settings(on_save=on_settings_saved))
+
     trigger_action = QAction("Trigger break now", menu)
     trigger_action.triggered.connect(lambda: trigger())
 
@@ -50,6 +54,7 @@ def build(trigger: Callable[[], None]) -> QSystemTrayIcon:
     quit_action.triggered.connect(lambda: QApplication.quit())
 
     menu.addAction(pause_action)
+    menu.addAction(settings_action)
     menu.addAction(trigger_action)
     menu.addSeparator()
     menu.addAction(quit_action)

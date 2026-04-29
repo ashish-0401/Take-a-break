@@ -102,36 +102,22 @@ Or right-click the tray icon → **Quit**.
 
 ## Customise
 
-All settings live in [src/take_a_break/config.py](src/take_a_break/config.py). Restart the app after any change:
+Right-click the tray icon → **Settings** to change your schedule at any time:
 
-```powershell
-Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue; wscript .\run.vbs
-```
+- **Interval** — how often breaks fire
+- **Work hours** — start and end hour (breaks won't fire outside this window)
+- **Active days** — any combination of Mon–Sun (check Saturday/Sunday to use it on weekends or evenings)
 
-Key settings:
+Settings are saved to `%APPDATA%\take-a-break\config.json` and take effect immediately — no restart needed.
 
-| Setting | Default | Description |
-|---|---|---|
-| `INTERVAL_MS` | 1 800 000 (30 min) | Time between breaks |
-| `OVERLAY_DURATION_MS` | 30 000 (30 s) | Auto-dismiss time |
-| `WORK_START_HOUR` | 9 | Don't break before this hour |
-| `WORK_END_HOUR` | 18 | Don't break after this hour |
-| `WORK_DAYS` | Mon–Fri | Days breaks are active |
-| `MESSAGE` | "I see you!" | Card title |
-| `SUBMESSAGE` | "Get up…" | Card sub-text |
-| `BUTTON_TEXT` | "As you command…" | Dismiss button label |
-| `GIF_SPEED_PERCENT` | 50 | Cat animation speed (100 = original) |
-| `HIDE_FROM_SCREEN_CAPTURE` | `True` | Invisible to Teams/Zoom/OBS |
-| `SOUND_ENABLED` | `True` | Play a chime on break |
-
-Alternatively, drop a `config.json` in `%APPDATA%\take-a-break\` to override settings without editing source:
+Advanced users can also edit that JSON file directly. Supported keys:
 
 ```jsonc
 {
   "INTERVAL_MS": 1800000,
   "WORK_START_HOUR": 9,
   "WORK_END_HOUR": 18,
-  "WORK_DAYS": [0, 1, 2, 3, 4],
+  "WORK_DAYS": [0, 1, 2, 3, 4],   // 0=Mon … 6=Sun
   "MESSAGE": "I see you!",
   "SUBMESSAGE": "Get up. Look out the window. Drink some water.",
   "BUTTON_TEXT": "As you command, your furriness",
@@ -147,6 +133,10 @@ Alternatively, drop a `config.json` in `%APPDATA%\take-a-break\` to override set
 ## Building a redistributable installer
 
 If you want to share this with someone who doesn't have Python installed, you can build a standalone `.exe` installer. It bundles everything — no setup needed on the other machine.
+
+The installer includes a settings wizard (interval, work hours, active days) so the person can configure it during install. They can also change settings anytime via the tray icon afterwards.
+
+**You don't need to make the repo public.** Just build the installer locally and send the `.exe` file via email, Google Drive, USB, or any file-sharing tool.
 
 ### Prerequisites
 - [PyInstaller](https://pyinstaller.org/) (installed by the build script automatically)

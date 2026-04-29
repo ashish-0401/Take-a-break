@@ -33,5 +33,11 @@ def start(on_tick: Callable[[], None]) -> None:
     timer.start()
     STATE.timer = timer  # keep reference
 
+
+def reload() -> None:
+    """Hot-reload the timer interval from config (call after settings save)."""
+    if STATE.timer is not None:
+        STATE.timer.setInterval(cfg.INTERVAL_MS)
+
     # First fire shortly after launch (still respecting work hours / pause)
     QTimer.singleShot(cfg.FIRST_DELAY_MS, maybe_fire)

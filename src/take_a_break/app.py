@@ -13,7 +13,10 @@ def run() -> None:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)  # keep tray alive when card closes
 
-    tray_icon = tray.build(trigger=show_overlay)
+    tray_icon = tray.build(
+        trigger=show_overlay,
+        on_settings_saved=scheduler.reload,
+    )
     tray_icon.show()
 
     scheduler.start(on_tick=show_overlay)
