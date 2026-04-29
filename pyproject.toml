@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "take-a-break"
+version = "0.1.0"
+description = "Periodic break reminder with a chubby cat overlay."
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.6.0",
+]
+
+[project.scripts]
+take-a-break = "take_a_break.app:run"
+
+[tool.setuptools.packages.find]
+where = ["src"]
