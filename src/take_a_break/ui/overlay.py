@@ -19,8 +19,8 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QFrame,
 )
 
-from . import config as cfg
-from .state import STATE
+from ..core import config as cfg
+from ..core.state import STATE
 
 # Optional sound (Windows built-in)
 try:

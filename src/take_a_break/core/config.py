@@ -23,8 +23,8 @@ def _resource_root() -> Path:
         if meipass:
             return Path(meipass)
         return Path(sys.executable).parent
-    # Source checkout: <repo>/assets next to <repo>/src/take_a_break/
-    return Path(__file__).resolve().parent.parent.parent
+    # Source checkout: <repo>/assets — config is now at src/take_a_break/core/config.py
+    return Path(__file__).resolve().parent.parent.parent.parent
 
 
 PACKAGE_DIR = Path(__file__).resolve().parent

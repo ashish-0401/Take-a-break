@@ -6,8 +6,9 @@ import sys
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication
 
-from . import scheduler, tray
-from .overlay import show_overlay
+from .core import scheduler
+from .ui import tray
+from .ui.overlay import show_overlay
 
 
 def _acquire_mutex() -> object | None:

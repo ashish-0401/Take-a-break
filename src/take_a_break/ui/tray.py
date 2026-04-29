@@ -7,9 +7,9 @@ from typing import Callable
 from PySide6.QtGui import QAction, QIcon, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-from . import config as cfg
+from ..core import config as cfg
 from .settings_window import open_settings
-from .state import STATE
+from ..core.state import STATE
 
 
 def _build_icon() -> QIcon:

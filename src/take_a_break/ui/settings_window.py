@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget,
 )
 
-from . import config as cfg
+from ..core import config as cfg
 
 _DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
