@@ -139,20 +139,15 @@ The installer includes a settings wizard (interval, work hours, active days) so 
 **You don't need to make the repo public.** Just build the installer locally and send the `.exe` file via email, Google Drive, USB, or any file-sharing tool.
 
 ### Prerequisites
-- [PyInstaller](https://pyinstaller.org/) (installed by the build script automatically)
-- [Inno Setup 6](https://jrsoftware.org/isdl.php) (free, install separately)
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (free — install it, then run the build script below)
 
 ### Build
 ```powershell
-# 1. Build the exe bundle
 .\packaging\build.ps1
-
-# 2. Build the installer (requires Inno Setup 6)
-& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\installer.iss
 # Output: dist-installer\take-a-break-setup.exe
 ```
 
-The installer includes a settings wizard (work hours, interval, message text) and creates a proper uninstaller in **Settings → Apps**.
+That single script installs PyInstaller, builds the exe bundle, finds Inno Setup automatically, and produces the installer. Works whether Inno Setup is installed system-wide or per-user.
 
 ### Auto-release via GitHub Actions
 

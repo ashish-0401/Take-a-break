@@ -22,9 +22,6 @@ OutputBaseFilename=take-a-break-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
-SetupIconFile=..\assets\chubby-cat.png
 UninstallDisplayName={#AppName}
 
 [Files]
