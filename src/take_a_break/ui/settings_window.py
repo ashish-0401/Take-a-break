@@ -84,7 +84,7 @@ class SettingsDialog(QDialog):
             QDialogButtonBox.StandardButton.Save |
             QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self._save)
+        buttons.button(QDialogButtonBox.StandardButton.Save).clicked.connect(self._save)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
