@@ -1,13 +1,13 @@
 # Take-a-break
 
-A small Windows app that reminds you to take a break — a cat walks in, tells you to get up, and disappears after 30 seconds.
+A small Windows app that reminds you to take a break ï¿½ a cat walks in, tells you to get up, and disappears after 30 seconds.
 
 ## Features
 
-- Break reminder every 30 minutes during work hours (Mon–Fri, 09:00–18:00 by default).
+- Break reminder every 30 minutes during work hours (Monï¿½Fri, 09:00ï¿½18:00 by default).
 - Walking-cat animation + a card with a message and Dismiss button.
-- Works across multiple monitors — dims every screen.
-- Invisible to screen sharing (Teams, Zoom, OBS) — only you see the cat.
+- Works across multiple monitors ï¿½ dims every screen.
+- Invisible to screen sharing (Teams, Zoom, OBS) ï¿½ only you see the cat.
 - Settings accessible from the tray icon at any time.
 - Auto-start at login (optional).
 
@@ -15,7 +15,7 @@ A small Windows app that reminds you to take a break — a cat walks in, tells you
 
 ## Quick start (run from source)
 
-**Requires Python 3.11+.** Download from [python.org](https://www.python.org/downloads/) — tick **"Add python.exe to PATH"** during install.
+**Requires Python 3.11+.** Download from [python.org](https://www.python.org/downloads/) ï¿½ tick **"Add python.exe to PATH"** during install.
 
 ```powershell
 # 1. Clone
@@ -50,11 +50,11 @@ Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 
 Left-click the tray icon to open the Settings window. You can change:
 
-- **Interval** — how often breaks fire (default: 30 min)
-- **Work hours** — start and end hour (breaks won't fire outside this window)
-- **Active days** — any combination including weekends or evenings
+- **Interval** ï¿½ how often breaks fire (default: 30 min)
+- **Work hours** ï¿½ start and end hour (breaks won't fire outside this window)
+- **Active days** ï¿½ any combination including weekends or evenings
 
-Settings save instantly — no restart needed.
+Settings save instantly ï¿½ no restart needed.
 
 For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a-break\config.json`:
 
@@ -82,25 +82,25 @@ For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a
 .
 +-- assets/                  # Cat GIF, image, sound file
 +-- installer/               # Build and distribution scripts
-¦   +-- entry.py             # Entry point for PyInstaller
-¦   +-- take-a-break.spec    # PyInstaller build config
-¦   +-- build.ps1            # One-command build script
-¦   +-- installer.iss        # Inno Setup installer with settings wizard
+ï¿½   +-- entry.py             # Entry point for PyInstaller
+ï¿½   +-- take-a-break.spec    # PyInstaller build config
+ï¿½   +-- build.ps1            # One-command build script
+ï¿½   +-- installer.iss        # Inno Setup installer with settings wizard
 +-- scripts/
-¦   +-- install_autostart.ps1
+ï¿½   +-- install_autostart.ps1
 +-- src/take_a_break/
-¦   +-- core/                # App logic
-¦   ¦   +-- config.py        # All default settings + user config loader
-¦   ¦   +-- scheduler.py     # Work-hours-aware break timer
-¦   ¦   +-- state.py         # Shared runtime state
-¦   +-- ui/                  # All windows and UI
-¦   ¦   +-- overlay.py       # Blocker + cat + glass card windows
-¦   ¦   +-- settings_window.py
-¦   ¦   +-- tray.py          # System tray icon and menu
-¦   +-- app.py               # Startup — boots Qt, tray, scheduler
-¦   +-- __main__.py
+ï¿½   +-- core/                # App logic
+ï¿½   ï¿½   +-- config.py        # All default settings + user config loader
+ï¿½   ï¿½   +-- scheduler.py     # Work-hours-aware break timer
+ï¿½   ï¿½   +-- state.py         # Shared runtime state
+ï¿½   +-- ui/                  # All windows and UI
+ï¿½   ï¿½   +-- overlay.py       # Blocker + cat + glass card windows
+ï¿½   ï¿½   +-- settings_window.py
+ï¿½   ï¿½   +-- tray.py          # System tray icon and menu
+ï¿½   +-- app.py               # Startup ï¿½ boots Qt, tray, scheduler
+ï¿½   +-- __main__.py
 +-- .github/workflows/
-¦   +-- release.yml          # Auto-builds installer on git tag push
+ï¿½   +-- release.yml          # Auto-builds installer on git tag push
 +-- requirements.txt
 +-- run.vbs                  # Silent launcher (no console window)
 +-- pyproject.toml
@@ -110,7 +110,7 @@ For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a
 
 ## Building a redistributable installer
 
-To share with someone who doesn't have Python — build a standalone installer locally and send the `.exe` directly (email, USB, Drive). No need to make the repo public.
+To share with someone who doesn't have Python ï¿½ build a standalone installer locally and send the `.exe` directly (email, USB, Drive). No need to make the repo public.
 
 **Requires:** [Inno Setup 6](https://jrsoftware.org/isdl.php) (free)
 
@@ -121,9 +121,7 @@ To share with someone who doesn't have Python — build a standalone installer loc
 
 The installer includes a settings wizard and registers a proper uninstaller in **Settings ? Apps**.
 
-> **About the size (~109 MB installed):** Qt (PySide6) bundles its own rendering engine — ~86 MB of DLLs. This is normal for any Qt app.
-
-> **SmartScreen warning:** unsigned `.exe` files show a "Windows protected your PC" prompt on first run. Click **More info ? Run anyway**.
+> **SmartScreen warning:** If you see a "Windows protected your PC" prompt on first run, click **More info â†’ Run anyway**.
 
 ### Auto-release via GitHub Actions
 
