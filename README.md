@@ -12,6 +12,171 @@ A tiny Windows background app that nudges you to take a break with a sassy walki
 - System tray icon: Pause / Resume, Trigger break now, Quit.
 - Auto-start at login via a Startup-folder shortcut.
 
+---
+
+## Prerequisites (before you clone)
+
+| Requirement | Version | How to get it |
+|---|---|---|
+| Windows | 10 or 11 | — |
+| Python | 3.11 or later | [python.org/downloads](https://www.python.org/downloads/) — tick **"Add python.exe to PATH"** during install |
+| Git | any recent | [git-scm.com](https://git-scm.com/) (optional — only needed if cloning) |
+
+Verify Python is installed and on PATH:
+```powershell
+python --version   # should print Python 3.11.x or higher
+```
+
+---
+
+## Getting started (run from source)
+
+### 1. Clone the repo
+```powershell
+git clone https://github.com/ashish-0401/Take-a-break.git
+cd Take-a-break
+```
+
+### 2. Install dependencies
+```powershell
+python -m pip install --user -r requirements.txt
+```
+This installs **PySide6** (Qt for Python) — about 80 MB, one-time.
+
+### 3. Start the app
+```powershell
+wscript run.vbs
+```
+The app starts silently in the background. A cat tray icon appears in the system tray (bottom-right). First break fires after ~30 min (during work hours).
+
+### 4. Auto-start at login (optional)
+```powershell
+.\scripts\install_autostart.ps1
+```
+Creates a shortcut in your Windows Startup folder so the app launches automatically when you log in.
+
+To remove it later:
+```powershell
+.\scripts\install_autostart.ps1 -Uninstall
+```
+
+---
+
+## Stopping the app
+
+```powershell
+Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
+```
+
+Or right-click the tray icon → **Quit**.
+
+---
+
+## Project layout
+
+```
+.
+├── assets/                    # cat PNG, walking-cat GIF, optional sound
+├── packaging/
+│   ├── build.ps1              # local PyInstaller build script
+│   ├── entry.py               # frozen entry point for PyInstaller
+│   ├── installer.iss          # Inno Setup installer script (settings wizard)
+│   └── take-a-break.spec      # PyInstaller spec
+├── scripts/
+│   └── install_autostart.ps1  # adds/removes Windows Startup shortcut
+├── src/take_a_break/
+│   ├── app.py                 # entry point — boots QApplication, tray, scheduler
+│   ├── config.py              # all knobs (interval, work hours, colors, messages)
+│   ├── overlay.py             # blocker + cat + glass card windows
+│   ├── scheduler.py           # work-hours-aware QTimer
+│   ├── tray.py                # QSystemTrayIcon
+│   └── state.py               # tiny shared dataclass
+├── .github/workflows/
+│   └── release.yml            # auto-build installer on git tag push
+├── pyproject.toml
+├── requirements.txt
+└── run.vbs                    # silent launcher (no console window)
+```
+
+---
+
+## Customise
+
+All settings live in [src/take_a_break/config.py](src/take_a_break/config.py). Restart the app after any change:
+
+```powershell
+Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue; wscript .\run.vbs
+```
+
+Key settings:
+
+| Setting | Default | Description |
+|---|---|---|
+| `INTERVAL_MS` | 1 800 000 (30 min) | Time between breaks |
+| `OVERLAY_DURATION_MS` | 30 000 (30 s) | Auto-dismiss time |
+| `WORK_START_HOUR` | 9 | Don't break before this hour |
+| `WORK_END_HOUR` | 18 | Don't break after this hour |
+| `WORK_DAYS` | Mon–Fri | Days breaks are active |
+| `MESSAGE` | "I see you!" | Card title |
+| `SUBMESSAGE` | "Get up…" | Card sub-text |
+| `BUTTON_TEXT` | "As you command…" | Dismiss button label |
+| `GIF_SPEED_PERCENT` | 50 | Cat animation speed (100 = original) |
+| `HIDE_FROM_SCREEN_CAPTURE` | `True` | Invisible to Teams/Zoom/OBS |
+| `SOUND_ENABLED` | `True` | Play a chime on break |
+
+Alternatively, drop a `config.json` in `%APPDATA%\take-a-break\` to override settings without editing source:
+
+```jsonc
+{
+  "INTERVAL_MS": 1800000,
+  "WORK_START_HOUR": 9,
+  "WORK_END_HOUR": 18,
+  "WORK_DAYS": [0, 1, 2, 3, 4],
+  "MESSAGE": "I see you!",
+  "SUBMESSAGE": "Get up. Look out the window. Drink some water.",
+  "BUTTON_TEXT": "As you command, your furriness",
+  "GIF_SPEED_PERCENT": 50,
+  "BLOCKER_ALPHA": 0.45,
+  "SOUND_ENABLED": true,
+  "HIDE_FROM_SCREEN_CAPTURE": true
+}
+```
+
+---
+
+## Building a redistributable installer
+
+For sharing with non-technical friends (no Python required on their machine):
+
+### Prerequisites
+- [PyInstaller](https://pyinstaller.org/) (installed by the build script automatically)
+- [Inno Setup 6](https://jrsoftware.org/isdl.php) (free, install separately)
+
+### Build
+```powershell
+# 1. Build the exe bundle
+.\packaging\build.ps1
+
+# 2. Build the installer (requires Inno Setup 6)
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\installer.iss
+# Output: dist-installer\take-a-break-setup.exe
+```
+
+The installer includes a settings wizard (work hours, interval, message text) and creates a proper uninstaller in **Settings → Apps**.
+
+### Auto-release via GitHub Actions
+
+Tag a release and GitHub builds + attaches the installer automatically:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+# Installer appears at: https://github.com/ashish-0401/Take-a-break/releases/latest
+```
+
+> **Note:** Unsigned executables show a Windows SmartScreen warning on first run. Click **More info → Run anyway** to proceed. This is normal for any free indie Windows app.
+
+
 ## Project layout
 
 ```
