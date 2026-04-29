@@ -1,6 +1,138 @@
 # Take-a-break
 
-A tiny Windows background app that nudges you to take a break with a sassy walking cat and a glass card telling you to step away from the screen.
+A small Windows app that reminds you to take a break — a cat walks in, tells you to get up, and disappears after 30 seconds.
+
+## Features
+
+- Break reminder every 30 minutes during work hours (Mon–Fri, 09:00–18:00 by default).
+- Walking-cat animation + a card with a message and Dismiss button.
+- Works across multiple monitors — dims every screen.
+- Invisible to screen sharing (Teams, Zoom, OBS) — only you see the cat.
+- Settings accessible from the tray icon at any time.
+- Auto-start at login (optional, set during install).
+
+---
+
+## Quick start (run from source)
+
+**You need Python 3.11+ installed.** Download it from [python.org](https://www.python.org/downloads/) — during install, tick **"Add python.exe to PATH"**.
+
+```powershell
+# 1. Clone
+git clone https://github.com/ashish-0401/Take-a-break.git
+cd Take-a-break
+
+# 2. Install the one dependency
+python -m pip install --user -r requirements.txt
+
+# 3. Start (runs silently in the background)
+wscript run.vbs
+```
+
+A cat icon appears in the system tray (bottom-right, may be hidden under `^`).  
+**Left-click** the icon → Settings.  
+**Right-click** → Pause / Trigger break / Quit.
+
+### Optional: auto-start at login
+```powershell
+.\scripts\install_autostart.ps1            # enable
+.\scripts\install_autostart.ps1 -Uninstall # disable
+```
+
+### Stop
+```powershell
+Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
+```
+Or right-click tray → **Quit**.
+
+---
+
+## Settings
+
+Left-click the tray icon to open Settings. You can change:
+
+- **Interval** — how often breaks fire (default: 30 min)
+- **Work hours** — start and end hour (breaks won't fire outside this window)
+- **Active days** — any combination including weekends or evenings
+
+Settings save instantly, no restart needed.
+
+For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a-break\config.json`:
+
+```jsonc
+{
+  "INTERVAL_MS": 1800000,          // 30 min in milliseconds
+  "WORK_START_HOUR": 9,
+  "WORK_END_HOUR": 18,
+  "WORK_DAYS": [0, 1, 2, 3, 4],   // 0=Mon, 6=Sun
+  "MESSAGE": "I see you!",
+  "SUBMESSAGE": "Get up. Look out the window. Drink some water.",
+  "BUTTON_TEXT": "As you command, your furriness",
+  "GIF_SPEED_PERCENT": 50,
+  "BLOCKER_ALPHA": 0.45,
+  "SOUND_ENABLED": true,
+  "HIDE_FROM_SCREEN_CAPTURE": true
+}
+```
+
+---
+
+## Project layout
+
+```
+.
+├── assets/          # Cat GIF, image, and sound file
+├── installer/       # Everything for building the distributable
+│   ├── entry.py         # Entry point used by PyInstaller
+│   ├── take-a-break.spec  # PyInstaller build config
+│   ├── build.ps1        # One-command build script
+│   └── installer.iss    # Inno Setup installer script
+├── scripts/
+│   └── install_autostart.ps1  # Adds/removes Windows Startup shortcut
+├── src/take_a_break/    # Python source code
+│   ├── app.py           # Startup — creates tray, scheduler
+│   ├── config.py        # All default settings
+│   ├── overlay.py       # The cat + card windows
+│   ├── scheduler.py     # Work-hours timer
+│   ├── settings_window.py  # Settings dialog
+│   ├── tray.py          # System tray icon and menu
+│   └── state.py         # Shared state
+├── .github/workflows/
+│   └── release.yml      # Auto-builds installer on git tag push
+├── requirements.txt     # Just PySide6
+├── run.vbs              # Silent launcher (no console window)
+└── pyproject.toml
+```
+
+---
+
+## Building a redistributable installer
+
+If you want to share this with someone without making the repo public — just build the installer locally and send the `.exe` file directly (email, USB, Google Drive, etc.).
+
+**Requires:** [Inno Setup 6](https://jrsoftware.org/isdl.php) (free)
+
+```powershell
+.\installer\build.ps1
+# Output: dist-installer\take-a-break-setup.exe  (~50 MB compressed)
+```
+
+The installer has a settings wizard (interval, work hours, active days) so the person can configure it during install, and change it anytime from the tray afterwards.
+
+> **About the size (~109 MB installed):** the app uses Qt (PySide6) for the UI, which bundles its own rendering engine (~86 MB of DLLs). This is normal for Qt apps — VLC, OBS, and most cross-platform apps are similarly sized.
+
+> **SmartScreen warning:** unsigned `.exe` files show a "Windows protected your PC" prompt on first run. Click **More info → Run anyway**. This is standard for any self-distributed Windows app.
+
+### Auto-release via GitHub Actions
+
+Tag a release and GitHub builds and publishes the installer automatically:
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+# Installer appears at: https://github.com/ashish-0401/Take-a-break/releases/latest
+```
+
 
 ## Features
 

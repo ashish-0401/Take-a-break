@@ -8,7 +8,7 @@ block_cipher = None
 ROOT = Path(SPECPATH).parent
 
 a = Analysis(
-    [str(ROOT / "packaging" / "entry.py")],
+    [str(ROOT / "installer" / "entry.py")],
     pathex=[str(ROOT / "src")],
     binaries=[],
     datas=[
@@ -69,7 +69,8 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.zipfiles,
-    a.datas,
+    # Strip Qt translation (.qm) files — app is English-only, saves ~6 MB.
+    [d for d in a.datas if not d[0].endswith('.qm')],
     strip=False,
     upx=False,
     upx_exclude=[],

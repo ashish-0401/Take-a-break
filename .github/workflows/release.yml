@@ -23,7 +23,7 @@ jobs:
           python -m pip install pyinstaller PySide6
 
       - name: Build with PyInstaller
-        run: pyinstaller packaging/take-a-break.spec --clean --noconfirm
+        run: python -m PyInstaller installer/take-a-break.spec --clean --noconfirm
 
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
@@ -32,7 +32,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" packaging\installer.iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\installer.iss
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -10,7 +10,7 @@ try {
     if (Test-Path build) { Remove-Item build -Recurse -Force }
     if (Test-Path dist)  { Remove-Item dist  -Recurse -Force }
 
-    python -m PyInstaller packaging\take-a-break.spec --clean --noconfirm
+    python -m PyInstaller installer\take-a-break.spec --clean --noconfirm
 
     # Find ISCC.exe (works for both system-wide and per-user installs)
     $iscc = Get-ChildItem "$env:LOCALAPPDATA\Programs", "C:\Program Files*" `
@@ -24,7 +24,7 @@ try {
     }
 
     New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
-    & $iscc packaging\installer.iss
+    & $iscc installer\installer.iss
 
     Write-Host ""
     Write-Host "Installer: dist-installer\take-a-break-setup.exe" -ForegroundColor Green
