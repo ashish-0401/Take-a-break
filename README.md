@@ -146,7 +146,7 @@ Alternatively, drop a `config.json` in `%APPDATA%\take-a-break\` to override set
 
 ## Building a redistributable installer
 
-For sharing with non-technical friends (no Python required on their machine):
+If you want to share this with someone who doesn't have Python installed, you can build a standalone `.exe` installer. It bundles everything — no setup needed on the other machine.
 
 ### Prerequisites
 - [PyInstaller](https://pyinstaller.org/) (installed by the build script automatically)
