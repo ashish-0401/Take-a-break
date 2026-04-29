@@ -41,7 +41,8 @@ def run() -> None:
 
     scheduler.start(on_tick=show_overlay)
 
-    # Trigger a break 1.5 s after launch so the user can verify it works.
-    QTimer.singleShot(1500, show_overlay)
+    # Trigger a break as soon as the event loop is running, so launch-after-install
+    # immediately shows the cat (the user already waited for Qt to start up).
+    QTimer.singleShot(0, show_overlay)
 
     sys.exit(app.exec())
