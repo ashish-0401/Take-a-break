@@ -59,7 +59,7 @@ Left-click the tray icon to open the Settings window. You can change:
 - **Active days** — any combination including weekends or evenings
 - **Show break on** — *All screens* or *Primary screen only*
 
-Settings save instantly — no restart needed. The dialog also has a **Quit app** button.
+Changes auto-save as you make them — no Save button, no restart needed. Close the dialog when you're done. The dialog also has a **Quit app** button.
 
 For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a-break\config.json`:
 

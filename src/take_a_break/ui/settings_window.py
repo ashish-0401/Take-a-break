@@ -12,8 +12,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import (
     QApplication, QButtonGroup, QCheckBox, QDialog, QDialogButtonBox,
-    QFormLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton, QRadioButton,
-    QSpinBox, QVBoxLayout, QWidget,
+    QFormLayout, QGroupBox, QHBoxLayout, QLabel, QMessageBox, QPushButton,
+    QRadioButton, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from ..core import config as cfg
@@ -99,12 +99,15 @@ class SettingsDialog(QDialog):
         root.addWidget(screens_group)
 
         # ---- Buttons ----
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Save |
-            QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.button(QDialogButtonBox.StandardButton.Save).clicked.connect(self._save)
+        # No Save button — every change auto-saves (debounced 200 ms below).
+        # Closing the dialog (X / Esc / Close) is sufficient to dismiss it;
+        # nothing is lost on close.
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
+        buttons.accepted.connect(self.accept)
+        close_btn = buttons.button(QDialogButtonBox.StandardButton.Close)
+        if close_btn is not None:
+            close_btn.clicked.connect(self.accept)
 
         # "Quit app" button — lets the user stop take-a-break without using
         # the tray right-click menu or killing the process.
@@ -115,26 +118,35 @@ class SettingsDialog(QDialog):
 
         root.addWidget(buttons)
 
-        # ---- Status line (shows "Saved ✓" feedback) ----
-        self._status = QLabel("")
-        self._status.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._status.setStyleSheet("color: #2e7d32; font-weight: 600;")
-        self._status.setMinimumHeight(18)
-        root.addWidget(self._status)
+        # ---- Auto-save plumbing ----
+        # Debounce so a spinbox click that bumps the value 5 times in a
+        # second doesn't write to disk 5 times.
+        self._save_timer = QTimer(self)
+        self._save_timer.setSingleShot(True)
+        self._save_timer.setInterval(200)
+        self._save_timer.timeout.connect(self._autosave)
 
-    def _set_status(self, text: str, color: str = "#2e7d32") -> None:
-        self._status.setStyleSheet(f"color: {color}; font-weight: 600;")
-        self._status.setText(text)
+        def schedule_save(*_args):
+            self._save_timer.start()
 
-    def _save(self) -> None:
+        # Hook every control's change signal.
+        self._interval_spin.valueChanged.connect(schedule_save)
+        self._start_spin.valueChanged.connect(schedule_save)
+        self._end_spin.valueChanged.connect(schedule_save)
+        for cb in self._day_checks:
+            cb.stateChanged.connect(schedule_save)
+        self._radio_all.toggled.connect(schedule_save)
+        self._radio_primary.toggled.connect(schedule_save)
+
+    def _autosave(self) -> None:
         start = self._start_spin.value()
         end = self._end_spin.value()
         if start >= end:
+            # Mark the offending fields red but don't pop a dialog — the user
+            # is still adjusting. Settings stay un-saved until valid.
             self._start_spin.setStyleSheet("border: 1px solid red;")
             self._end_spin.setStyleSheet("border: 1px solid red;")
-            self._set_status("Start hour must be before end hour", color="#c62828")
             return
-        # Clear any prior error styling
         self._start_spin.setStyleSheet("")
         self._end_spin.setStyleSheet("")
 
@@ -162,7 +174,11 @@ class SettingsDialog(QDialog):
                 encoding="utf-8",
             )
         except Exception as e:
-            self._set_status(f"Save failed: {e}", color="#c62828")
+            QMessageBox.critical(
+                self,
+                "Take a Break — save failed",
+                f"Could not save settings:\n\n{e}",
+            )
             return
 
         # Hot-reload config globals
@@ -175,15 +191,8 @@ class SettingsDialog(QDialog):
         if self._on_save:
             self._on_save()
 
-        # Show "Saved" feedback, then auto-close after a short delay so the
-        # user actually sees confirmation that something happened.
-        self._set_status("Saved ✓")
-        QTimer.singleShot(900, self.accept)
-
     def _quit_app(self) -> None:
-        # Confirm visually for a moment, then exit the whole app.
-        self._set_status("Quitting…", color="#c62828")
-        QTimer.singleShot(250, QApplication.quit)
+        QApplication.quit()
 
 
 def open_settings(on_save: Callable[[], None] | None = None) -> None:
