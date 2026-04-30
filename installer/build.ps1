@@ -32,6 +32,12 @@ try {
     New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
     & $iscc installer\installer.iss
 
+    # The PyInstaller `dist\` and `build\` folders are just intermediates
+    # used to produce the installer; delete them so only the user-facing
+    # one-click installer remains.
+    if (Test-Path dist)  { Remove-Item dist  -Recurse -Force }
+    if (Test-Path build) { Remove-Item build -Recurse -Force }
+
     Write-Host ""
     Write-Host "Installer: dist-installer\take-a-break-setup.exe" -ForegroundColor Green
 }

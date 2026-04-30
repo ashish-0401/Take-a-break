@@ -54,6 +54,8 @@ var
   SettingsPage: TInputQueryWizardPage;
   DaysPage: TWizardPage;
   DayChecks: array[0..6] of TCheckBox;
+  ScreenAllRadio: TRadioButton;
+  ScreenPrimaryRadio: TRadioButton;
 
 procedure InitializeWizard;
 var
@@ -100,11 +102,34 @@ begin
     DayChecks[i].Width := 200;
     DayChecks[i].Checked := (i <= 4); // Mon-Fri default
   end;
+
+  // "Show break on" — primary monitor only vs all monitors.
+  lbl := TLabel.Create(DaysPage);
+  lbl.Parent := DaysPage.Surface;
+  lbl.Caption := 'Show break on:';
+  lbl.Left := 0;
+  lbl.Top := 7 * 28 + 12;
+  lbl.Font.Style := [fsBold];
+
+  ScreenAllRadio := TRadioButton.Create(DaysPage);
+  ScreenAllRadio.Parent := DaysPage.Surface;
+  ScreenAllRadio.Caption := 'All screens';
+  ScreenAllRadio.Left := 0;
+  ScreenAllRadio.Top := 7 * 28 + 36;
+  ScreenAllRadio.Width := 220;
+  ScreenAllRadio.Checked := True;
+
+  ScreenPrimaryRadio := TRadioButton.Create(DaysPage);
+  ScreenPrimaryRadio.Parent := DaysPage.Surface;
+  ScreenPrimaryRadio.Caption := 'Primary screen only';
+  ScreenPrimaryRadio.Left := 0;
+  ScreenPrimaryRadio.Top := 7 * 28 + 60;
+  ScreenPrimaryRadio.Width := 220;
 end;
 
 function WriteUserConfig(): Boolean;
 var
-  Dir, Path, DayList, S: string;
+  Dir, Path, DayList, S, ShowAll: string;
   Interval, StartH, EndH, i: Integer;
   First: Boolean;
 begin
@@ -116,6 +141,11 @@ begin
   Interval := StrToIntDef(SettingsPage.Values[0], 30);
   StartH   := StrToIntDef(SettingsPage.Values[1], 9);
   EndH     := StrToIntDef(SettingsPage.Values[2], 18);
+
+  if ScreenAllRadio.Checked then
+    ShowAll := 'true'
+  else
+    ShowAll := 'false';
 
   // Build WORK_DAYS array
   DayList := '';
@@ -134,7 +164,8 @@ begin
        '  "INTERVAL_MS": ' + IntToStr(Interval * 60 * 1000) + ',' + #13#10 +
        '  "WORK_START_HOUR": ' + IntToStr(StartH) + ',' + #13#10 +
        '  "WORK_END_HOUR": ' + IntToStr(EndH) + ',' + #13#10 +
-       '  "WORK_DAYS": [' + DayList + ']' + #13#10 +
+       '  "WORK_DAYS": [' + DayList + '],' + #13#10 +
+       '  "SHOW_ON_ALL_SCREENS": ' + ShowAll + #13#10 +
        '}' + #13#10;
 
   if not SaveStringToFile(Path, S, False) then

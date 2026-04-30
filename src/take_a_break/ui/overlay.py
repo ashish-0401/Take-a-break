@@ -389,7 +389,12 @@ def show_overlay() -> None:
 
     _play_sound()
 
-    screens = QGuiApplication.screens()
+    # Either every connected monitor, or just the primary one.
+    if cfg.SHOW_ON_ALL_SCREENS:
+        screens = QGuiApplication.screens()
+    else:
+        primary = QGuiApplication.primaryScreen()
+        screens = [primary] if primary is not None else []
 
     # One blocker, cat, and card per screen.
     blockers: list[BlockerWindow] = []

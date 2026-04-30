@@ -90,6 +90,12 @@ BLOCKER_ALPHA = 0.45                  # 0.0 = invisible, 1.0 = solid black
 # You still see the cat; viewers see right through it.
 HIDE_FROM_SCREEN_CAPTURE = True
 
+# -------- Display --------
+# True  -> overlay covers every connected monitor.
+# False -> overlay shows only on the primary monitor (other monitors stay
+#          fully usable so you can keep glancing at e.g. a meeting / chat).
+SHOW_ON_ALL_SCREENS = True
+
 
 # -------- User overrides ---------------------------------------------------
 # Apply values from %APPDATA%\take-a-break\config.json over the defaults above.
@@ -99,6 +105,7 @@ _OVERRIDABLE = {
     "WORK_START_HOUR", "WORK_END_HOUR", "WORK_DAYS",
     "GIF_SPEED_PERCENT", "BLOCKER_ALPHA",
     "SOUND_ENABLED", "HIDE_FROM_SCREEN_CAPTURE",
+    "INPUT_GRACE_MS", "SHOW_ON_ALL_SCREENS",
 }
 
 try:

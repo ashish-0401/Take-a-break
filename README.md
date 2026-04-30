@@ -1,14 +1,15 @@
 # Take-a-break
 
-A small Windows app that reminds you to take a break � a cat walks in, tells you to get up, and disappears after 30 seconds.
+A small Windows app that reminds you to take a break — a cat walks in, tells you to get up, and disappears after 30 seconds.
 
 ## Features
 
-- Break reminder every 30 minutes during work hours (Mon�Fri, 09:00�18:00 by default).
+- Break reminder every 30 minutes during work hours (Mon–Fri, 09:00–18:00 by default).
 - Walking-cat animation + a card with a message and Dismiss button.
-- Works across multiple monitors � dims every screen.
-- Invisible to screen sharing (Teams, Zoom, OBS) � only you see the cat.
-- Settings accessible from the tray icon at any time.
+- Show on **all monitors** or **primary monitor only** (configurable).
+- Invisible to screen sharing (Teams, Zoom, OBS) — only you see the cat.
+- Input-grace window so a stray keypress can't dismiss the overlay the instant it appears.
+- Settings accessible from the tray icon at any time, including a **Quit app** button.
 - Auto-start at login (optional).
 
 ---
@@ -30,8 +31,8 @@ wscript run.vbs
 ```
 
 A cat icon appears in the system tray (bottom-right, may be hidden under `^`).  
-**Left-click** the icon ? Settings.  
-**Right-click** ? Pause / Trigger break / Quit.
+**Left-click** the icon → Settings.  
+**Right-click** → Pause / Trigger break / Quit.
 
 ### Auto-start at login (optional)
 ```powershell
@@ -40,6 +41,9 @@ A cat icon appears in the system tray (bottom-right, may be hidden under `^`).
 ```
 
 ### Stop the app
+Click the tray icon → **Quit app**, or right-click the tray icon → **Quit**.
+
+Fallback (if the tray icon is unresponsive):
 ```powershell
 Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 ```
@@ -50,20 +54,24 @@ Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 
 Left-click the tray icon to open the Settings window. You can change:
 
-- **Interval** � how often breaks fire (default: 30 min)
-- **Work hours** � start and end hour (breaks won't fire outside this window)
-- **Active days** � any combination including weekends or evenings
+- **Interval** — how often breaks fire (default: 30 min)
+- **Work hours** — start and end hour (breaks won't fire outside this window)
+- **Active days** — any combination including weekends or evenings
+- **Show break on** — *All screens* or *Primary screen only*
 
-Settings save instantly � no restart needed.
+Settings save instantly — no restart needed. The dialog also has a **Quit app** button.
 
 For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a-break\config.json`:
 
 ```jsonc
 {
-  "INTERVAL_MS": 1800000,
+  "INTERVAL_MS": 1800000,            // ms between breaks (1800000 = 30 min)
+  "OVERLAY_DURATION_MS": 30000,      // how long the overlay stays before auto-dismiss
   "WORK_START_HOUR": 9,
   "WORK_END_HOUR": 18,
-  "WORK_DAYS": [0, 1, 2, 3, 4],
+  "WORK_DAYS": [0, 1, 2, 3, 4],      // 0=Mon ... 6=Sun
+  "SHOW_ON_ALL_SCREENS": true,       // false = primary monitor only
+  "INPUT_GRACE_MS": 700,             // ms to ignore input after overlay appears
   "MESSAGE": "I see you!",
   "SUBMESSAGE": "Get up. Look out the window. Drink some water.",
   "BUTTON_TEXT": "As you command, your furriness",
@@ -80,30 +88,30 @@ For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a
 
 ```
 .
-+-- assets/                  # Cat GIF, image, sound file
-+-- installer/               # Build and distribution scripts
-�   +-- entry.py             # Entry point for PyInstaller
-�   +-- take-a-break.spec    # PyInstaller build config
-�   +-- build.ps1            # One-command build script
-�   +-- installer.iss        # Inno Setup installer with settings wizard
-+-- scripts/
-�   +-- install_autostart.ps1
-+-- src/take_a_break/
-�   +-- core/                # App logic
-�   �   +-- config.py        # All default settings + user config loader
-�   �   +-- scheduler.py     # Work-hours-aware break timer
-�   �   +-- state.py         # Shared runtime state
-�   +-- ui/                  # All windows and UI
-�   �   +-- overlay.py       # Blocker + cat + glass card windows
-�   �   +-- settings_window.py
-�   �   +-- tray.py          # System tray icon and menu
-�   +-- app.py               # Startup � boots Qt, tray, scheduler
-�   +-- __main__.py
-+-- .github/workflows/
-�   +-- release.yml          # Auto-builds installer on git tag push
-+-- requirements.txt
-+-- run.vbs                  # Silent launcher (no console window)
-+-- pyproject.toml
+├── assets/                  # Cat GIF, image, sound file
+├── installer/               # Build and distribution scripts
+│   ├── entry.py             # Entry point for PyInstaller
+│   ├── take-a-break.spec    # PyInstaller build config
+│   ├── build.ps1            # One-command build script
+│   └── installer.iss        # Inno Setup installer with settings wizard
+├── scripts/
+│   └── install_autostart.ps1
+├── src/take_a_break/
+│   ├── core/                # App logic
+│   │   ├── config.py        # All default settings + user config loader
+│   │   ├── scheduler.py     # Work-hours-aware break timer
+│   │   └── state.py         # Shared runtime state
+│   ├── ui/                  # All windows and UI
+│   │   ├── overlay.py       # Blocker + cat + glass card windows
+│   │   ├── settings_window.py
+│   │   └── tray.py          # System tray icon and menu
+│   ├── app.py               # Startup — boots Qt, tray, scheduler
+│   └── __main__.py
+├── .github/workflows/
+│   └── release.yml          # Auto-builds installer on git tag push
+├── requirements.txt
+├── run.vbs                  # Silent launcher (no console window)
+└── pyproject.toml
 ```
 
 ---
@@ -119,7 +127,7 @@ To share with someone who doesn't have Python � build a standalone installer l
 # Output: dist-installer\take-a-break-setup.exe  (~50 MB compressed)
 ```
 
-The installer includes a settings wizard and registers a proper uninstaller in **Settings ? Apps**.
+The installer includes a settings wizard (interval, work hours, active days, screen choice) and registers a proper uninstaller in **Settings → Apps**.
 
 > **SmartScreen warning:** If you see a "Windows protected your PC" prompt on first run, click **More info → Run anyway**.
 
