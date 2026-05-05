@@ -46,6 +46,30 @@ class SettingsDialog(QDialog):
         interval_layout.addRow("Remind me every", self._interval_spin)
         root.addWidget(interval_group)
 
+        # ---- Break duration ----
+        # How long the overlay stays before auto-dismissing. The "Never"
+        # checkbox stores 0 as the sentinel — overlay stays until ESC or
+        # the dismiss button is pressed.
+        duration_group = QGroupBox("Break duration")
+        duration_layout = QFormLayout(duration_group)
+        self._duration_spin = QSpinBox()
+        self._duration_spin.setRange(5, 600)
+        self._duration_spin.setSuffix("  seconds")
+        # Map current ms config back to seconds; if disabled (<=0) show 30.
+        self._duration_spin.setValue(
+            max(5, cfg.OVERLAY_DURATION_MS // 1000) if cfg.OVERLAY_DURATION_MS > 0 else 30
+        )
+        self._never_close_check = QCheckBox("Never auto-close (dismiss with ESC or button only)")
+        self._never_close_check.setChecked(cfg.OVERLAY_DURATION_MS <= 0)
+        # When "Never" is checked, disable the duration spinbox.
+        self._never_close_check.toggled.connect(
+            lambda checked: self._duration_spin.setEnabled(not checked)
+        )
+        self._duration_spin.setEnabled(not self._never_close_check.isChecked())
+        duration_layout.addRow("Auto-close after", self._duration_spin)
+        duration_layout.addRow("", self._never_close_check)
+        root.addWidget(duration_group)
+
         # ---- Work hours ----
         hours_group = QGroupBox("Work hours  (breaks only fire within this window)")
         hours_layout = QHBoxLayout(hours_group)
@@ -131,6 +155,8 @@ class SettingsDialog(QDialog):
 
         # Hook every control's change signal.
         self._interval_spin.valueChanged.connect(schedule_save)
+        self._duration_spin.valueChanged.connect(schedule_save)
+        self._never_close_check.stateChanged.connect(schedule_save)
         self._start_spin.valueChanged.connect(schedule_save)
         self._end_spin.valueChanged.connect(schedule_save)
         for cb in self._day_checks:
@@ -152,6 +178,10 @@ class SettingsDialog(QDialog):
 
         data: dict = {
             "INTERVAL_MS": self._interval_spin.value() * 60_000,
+            "OVERLAY_DURATION_MS": (
+                0 if self._never_close_check.isChecked()
+                else self._duration_spin.value() * 1000
+            ),
             "WORK_START_HOUR": start,
             "WORK_END_HOUR": end,
             "WORK_DAYS": [i for i, cb in enumerate(self._day_checks) if cb.isChecked()],

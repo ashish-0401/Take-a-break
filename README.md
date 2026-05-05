@@ -55,6 +55,7 @@ Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 Left-click the tray icon to open the Settings window. You can change:
 
 - **Interval** — how often breaks fire (default: 30 min)
+- **Break duration** — how long the overlay stays before auto-dismissing, or *Never* (only dismiss via ESC / button)
 - **Work hours** — start and end hour (breaks won't fire outside this window)
 - **Active days** — any combination including weekends or evenings
 - **Show break on** — *All screens* or *Primary screen only*

@@ -185,8 +185,8 @@ class CatWindow(QWidget):
                 self._label.setPixmap(pix)
                 self._label.setFixedSize(pix.size())
 
-        # Center the label horizontally, top-align.
-        self._label.move((avail.width() - self._label.width()) // 2, 0)
+        # Pin the cat to the right edge, top-aligned.
+        self._label.move(avail.width() - self._label.width(), 0)
 
 
 # ============================================================
@@ -452,7 +452,12 @@ def show_overlay() -> None:
 
     # Auto-dismiss — tracked so an early dismiss can cancel it (otherwise
     # a stale timer from this show would later close a future overlay).
-    _auto_dismiss_timer = QTimer()
-    _auto_dismiss_timer.setSingleShot(True)
-    _auto_dismiss_timer.timeout.connect(_close_all)
-    _auto_dismiss_timer.start(cfg.OVERLAY_DURATION_MS)
+    # OVERLAY_DURATION_MS <= 0 means "never auto-close" — user must press
+    # ESC or click the dismiss button.
+    if cfg.OVERLAY_DURATION_MS > 0:
+        _auto_dismiss_timer = QTimer()
+        _auto_dismiss_timer.setSingleShot(True)
+        _auto_dismiss_timer.timeout.connect(_close_all)
+        _auto_dismiss_timer.start(cfg.OVERLAY_DURATION_MS)
+    else:
+        _auto_dismiss_timer = None

@@ -36,7 +36,10 @@ Name: "{userstartup}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: autost
 Name: "autostart"; Description: "Start automatically when I log in"; GroupDescription: "Startup:"
 
 [Run]
-Filename: "{app}\{#AppExeName}"; Description: "Launch {#AppName} now"; Flags: nowait postinstall skipifsilent
+; Always launch silently after Finish — the scheduler only runs while the
+; app process is alive, so we want it running immediately after install
+; (no "Launch now" checkbox to forget to tick).
+Filename: "{app}\{#AppExeName}"; Flags: nowait runhidden skipifsilent
 
 [UninstallRun]
 Filename: "powershell.exe"; \
@@ -73,9 +76,11 @@ begin
   SettingsPage.Add('Interval (minutes between breaks):', False);
   SettingsPage.Add('Work start hour (0–23):', False);
   SettingsPage.Add('Work end hour (1–24):', False);
+  SettingsPage.Add('Auto-close after (seconds, 0 = never):', False);
   SettingsPage.Values[0] := '30';
   SettingsPage.Values[1] := '9';
   SettingsPage.Values[2] := '18';
+  SettingsPage.Values[3] := '30';
 
   // Page 2: work days checkboxes
   DaysPage := CreateCustomPage(
@@ -130,7 +135,7 @@ end;
 function WriteUserConfig(): Boolean;
 var
   Dir, Path, DayList, S, ShowAll: string;
-  Interval, StartH, EndH, i: Integer;
+  Interval, StartH, EndH, Duration, i: Integer;
   First: Boolean;
 begin
   Result := True;
@@ -141,6 +146,7 @@ begin
   Interval := StrToIntDef(SettingsPage.Values[0], 30);
   StartH   := StrToIntDef(SettingsPage.Values[1], 9);
   EndH     := StrToIntDef(SettingsPage.Values[2], 18);
+  Duration := StrToIntDef(SettingsPage.Values[3], 30);
 
   if ScreenAllRadio.Checked then
     ShowAll := 'true'
@@ -162,6 +168,7 @@ begin
 
   S := '{' + #13#10 +
        '  "INTERVAL_MS": ' + IntToStr(Interval * 60 * 1000) + ',' + #13#10 +
+       '  "OVERLAY_DURATION_MS": ' + IntToStr(Duration * 1000) + ',' + #13#10 +
        '  "WORK_START_HOUR": ' + IntToStr(StartH) + ',' + #13#10 +
        '  "WORK_END_HOUR": ' + IntToStr(EndH) + ',' + #13#10 +
        '  "WORK_DAYS": [' + DayList + '],' + #13#10 +
