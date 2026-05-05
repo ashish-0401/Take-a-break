@@ -35,15 +35,18 @@ A cat icon appears in the system tray (bottom-right, may be hidden under `^`).
 **Right-click** → Pause / Trigger break / Quit.
 
 ### Auto-start at login (optional)
+
 ```powershell
 .\scripts\install_autostart.ps1            # enable
 .\scripts\install_autostart.ps1 -Uninstall # disable
 ```
 
 ### Stop the app
+
 Click the tray icon → **Quit app**, or right-click the tray icon → **Quit**.
 
 Fallback (if the tray icon is unresponsive):
+
 ```powershell
 Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 ```
@@ -55,10 +58,10 @@ Stop-Process -Name take-a-break -Force -ErrorAction SilentlyContinue
 Left-click the tray icon to open the Settings window. You can change:
 
 - **Interval** — how often breaks fire (default: 30 min)
-- **Break duration** — how long the overlay stays before auto-dismissing, or *Never* (only dismiss via ESC / button)
+- **Break duration** — how long the overlay stays before auto-dismissing, or _Never_ (only dismiss via ESC / button)
 - **Work hours** — start and end hour (breaks won't fire outside this window)
 - **Active days** — any combination including weekends or evenings
-- **Show break on** — *All screens* or *Primary screen only*
+- **Show break on** — _All screens_ or _Primary screen only_
 
 Changes auto-save as you make them — no Save button, no restart needed. Close the dialog when you're done. The dialog also has a **Quit app** button.
 
@@ -66,20 +69,20 @@ For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a
 
 ```jsonc
 {
-  "INTERVAL_MS": 1800000,            // ms between breaks (1800000 = 30 min)
-  "OVERLAY_DURATION_MS": 30000,      // how long the overlay stays before auto-dismiss
+  "INTERVAL_MS": 1800000, // ms between breaks (1800000 = 30 min)
+  "OVERLAY_DURATION_MS": 30000, // how long the overlay stays before auto-dismiss
   "WORK_START_HOUR": 9,
   "WORK_END_HOUR": 18,
-  "WORK_DAYS": [0, 1, 2, 3, 4],      // 0=Mon ... 6=Sun
-  "SHOW_ON_ALL_SCREENS": true,       // false = primary monitor only
-  "INPUT_GRACE_MS": 700,             // ms to ignore input after overlay appears
+  "WORK_DAYS": [0, 1, 2, 3, 4], // 0=Mon ... 6=Sun
+  "SHOW_ON_ALL_SCREENS": true, // false = primary monitor only
+  "INPUT_GRACE_MS": 700, // ms to ignore input after overlay appears
   "MESSAGE": "I see you!",
   "SUBMESSAGE": "Get up. Look out the window. Drink some water.",
   "BUTTON_TEXT": "As you command, your furriness",
   "GIF_SPEED_PERCENT": 50,
   "BLOCKER_ALPHA": 0.45,
   "SOUND_ENABLED": true,
-  "HIDE_FROM_SCREEN_CAPTURE": true
+  "HIDE_FROM_SCREEN_CAPTURE": true,
 }
 ```
 
@@ -121,12 +124,12 @@ For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a
 
 To share with someone who doesn't have Python � build a standalone installer locally and send the `.exe` directly (email, USB, Drive). No need to make the repo public.
 
-**Requires:** [Inno Setup 6](https://jrsoftware.org/isdl.php) (free)
-
 ```powershell
 .\installer\build.ps1
 # Output: dist-installer\take-a-break-setup.exe  (~50 MB compressed)
 ```
+
+**Note:** Inno Setup is automatically downloaded and installed (silently) if not found on your system. No manual setup required. Requires internet connection for first-time build.
 
 The installer includes a settings wizard (interval, work hours, active days, screen choice) and registers a proper uninstaller in **Settings → Apps**.
 

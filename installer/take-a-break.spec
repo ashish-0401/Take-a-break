@@ -20,7 +20,7 @@ a = Analysis(
     excludes=[
         # stdlib we don't need
         "tkinter", "test", "unittest", "pydoc", "doctest",
-        "email", "html", "http", "urllib", "xml", "xmlrpc",
+        "email", "html", "http", "xml", "xmlrpc",
         # Unused PySide6 / Qt modules (big savings)
         "PySide6.QtWebEngine", "PySide6.QtWebEngineCore",
         "PySide6.QtWebEngineWidgets", "PySide6.QtWebChannel",
