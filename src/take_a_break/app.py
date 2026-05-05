@@ -27,7 +27,16 @@ def _acquire_mutex() -> object | None:
 def run() -> None:
     mutex = _acquire_mutex()
     if mutex is None:
-        # Another instance is already running — exit silently.
+        # Another instance is already running — tell the user where to find it.
+        _app = QApplication.instance() or QApplication(sys.argv)
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(
+            None,
+            "Take a Break",
+            "Take a Break is already running.\n\n"
+            "Look for the cat icon in the system tray (bottom-right, "
+            "possibly hidden under the ^ arrow).",
+        )
         sys.exit(0)
 
     app = QApplication.instance() or QApplication(sys.argv)

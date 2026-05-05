@@ -13,7 +13,7 @@ from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import (
     QApplication, QButtonGroup, QCheckBox, QDialog, QDialogButtonBox,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QMessageBox, QPushButton,
-    QRadioButton, QSpinBox, QVBoxLayout, QWidget,
+    QRadioButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from ..core import config as cfg
@@ -29,10 +29,23 @@ class SettingsDialog(QDialog):
             Qt.WindowType.Dialog
             | Qt.WindowType.WindowCloseButtonHint
         )
-        self.setFixedWidth(360)
+        self.setMinimumWidth(360)
+        self.setMinimumHeight(300)
+        self.resize(380, 580)
         self._on_save = on_save
 
-        root = QVBoxLayout(self)
+        # Top-level layout: scroll area + fixed footer.
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # ---- Scrollable content area ----
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
+        content = QWidget()
+        root = QVBoxLayout(content)
         root.setSpacing(16)
         root.setContentsMargins(20, 20, 20, 20)
 
@@ -122,25 +135,28 @@ class SettingsDialog(QDialog):
         screens_layout.addWidget(self._radio_primary)
         root.addWidget(screens_group)
 
-        # ---- Buttons ----
-        # No Save button — every change auto-saves (debounced 200 ms below).
-        # Closing the dialog (X / Esc / Close) is sufficient to dismiss it;
-        # nothing is lost on close.
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.reject)
-        buttons.accepted.connect(self.accept)
-        close_btn = buttons.button(QDialogButtonBox.StandardButton.Close)
-        if close_btn is not None:
-            close_btn.clicked.connect(self.accept)
+        # Finalize scrollable content.
+        scroll.setWidget(content)
+        outer.addWidget(scroll, 1)  # stretch factor = 1 so scroll takes space
+
+        # ---- Footer (always visible, outside scroll) ----
+        footer = QHBoxLayout()
+        footer.setContentsMargins(20, 10, 20, 10)
 
         # "Quit app" button — lets the user stop take-a-break without using
         # the tray right-click menu or killing the process.
         quit_btn = QPushButton("Quit app")
         quit_btn.setToolTip("Stop take-a-break completely until you launch it again")
         quit_btn.clicked.connect(self._quit_app)
-        buttons.addButton(quit_btn, QDialogButtonBox.ButtonRole.DestructiveRole)
 
-        root.addWidget(buttons)
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+
+        footer.addWidget(quit_btn)
+        footer.addStretch()
+        footer.addWidget(close_btn)
+
+        outer.addLayout(footer)
 
         # ---- Auto-save plumbing ----
         # Debounce so a spinbox click that bumps the value 5 times in a
