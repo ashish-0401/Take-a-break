@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QObject, QEvent
 from PySide6.QtGui import (
     QGuiApplication, QImageReader, QPixmap, QColor, QPainter, QKeyEvent, QCursor,
 )
@@ -48,6 +48,29 @@ def _exclude_from_capture(widget: QWidget) -> None:
 
 # ----- Currently-open windows (so they aren't garbage collected) -----
 _open_windows: list[QWidget] = []
+
+# Global escape filter instance while overlay is shown
+_escape_filter: QObject | None = None
+
+
+class _EscapeFilter(QObject):
+    """Application-level event filter that swallows Escape while overlay is open.
+
+    This prevents the Escape key from reaching a fullscreen application
+    (e.g. a browser video) and causing it to exit fullscreen when the
+    overlay is dismissed by ESC.
+    """
+    def eventFilter(self, obj, event):
+        if not STATE.overlays_open:
+            return super().eventFilter(obj, event)
+        if event.type() in (QEvent.KeyPress, QEvent.KeyRelease):
+            try:
+                if event.key() == Qt.Key.Key_Escape:
+                    event.accept()
+                    return True
+            except Exception:
+                return False
+        return super().eventFilter(obj, event)
 
 
 def _play_sound() -> None:
@@ -199,7 +222,7 @@ class GlassCard(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.Tool
+            | Qt.WindowType.Window
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
@@ -365,6 +388,7 @@ _auto_dismiss_timer: QTimer | None = None
 
 def _close_all():
     global _auto_dismiss_timer
+    global _escape_filter
     if _auto_dismiss_timer is not None:
         _auto_dismiss_timer.stop()
         _auto_dismiss_timer = None
@@ -378,6 +402,15 @@ def _close_all():
             w.deleteLater()
         except Exception:
             pass
+    # Remove the global escape event filter so ESC returns to normal behavior
+    try:
+        if _escape_filter is not None:
+            app = QGuiApplication.instance()
+            if app is not None:
+                app.removeEventFilter(_escape_filter)
+    except Exception:
+        pass
+    _escape_filter = None
 
 
 def show_overlay() -> None:
@@ -437,14 +470,32 @@ def show_overlay() -> None:
 
     # Focus the card on the screen under the cursor (so ESC works there).
     active = QGuiApplication.screenAt(QCursor.pos()) or QGuiApplication.primaryScreen()
+    selected_card = None
     try:
         idx = screens.index(active)
-        cards[idx].activateWindow()
-        cards[idx].setFocus()
+        selected_card = cards[idx]
     except (ValueError, IndexError):
         if cards:
-            cards[0].activateWindow()
-            cards[0].setFocus()
+            selected_card = cards[0]
+
+    if selected_card is not None:
+        selected_card.activateWindow()
+        selected_card.setFocus()
+
+        # Some platforms may need a second focus pass after the overlay is visible.
+        QTimer.singleShot(100, lambda card=selected_card: card.activateWindow())
+        QTimer.singleShot(100, lambda card=selected_card: card.setFocus())
+
+        # Install an application-level event filter to swallow Escape
+        # while the overlay is active so fullscreen apps aren't exited.
+        global _escape_filter
+        try:
+            app = QGuiApplication.instance()
+            if app is not None:
+                _escape_filter = _EscapeFilter()
+                app.installEventFilter(_escape_filter)
+        except Exception:
+            _escape_filter = None
 
     _open_windows.extend(blockers)
     _open_windows.extend(cats)
