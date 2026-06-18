@@ -11,6 +11,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+try:
+    import ctypes
+    from ctypes import wintypes
+except Exception:  # pragma: no cover
+    ctypes = None
+    wintypes = None
+
 from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QObject, QEvent
 from PySide6.QtGui import (
     QGuiApplication, QImageReader, QPixmap, QColor, QPainter, QKeyEvent, QCursor,
@@ -43,6 +50,70 @@ def _exclude_from_capture(widget: QWidget) -> None:
         WDA_EXCLUDEFROMCAPTURE = 0x11
         ctypes.windll.user32.SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE)
     except Exception:
+        pass
+
+
+# Low-level Windows keyboard hook used while the overlay is active.
+_keyboard_hook = None
+_keyboard_proc = None
+
+if ctypes is not None:
+    WH_KEYBOARD_LL = 13
+    WM_KEYDOWN = 0x0100
+    WM_KEYUP = 0x0101
+    WM_SYSKEYDOWN = 0x0104
+    WM_SYSKEYUP = 0x0105
+    VK_ESCAPE = 0x1B
+
+    class KBDLLHOOKSTRUCT(ctypes.Structure):
+        _fields_ = [
+            ("vkCode", wintypes.DWORD),
+            ("scanCode", wintypes.DWORD),
+            ("flags", wintypes.DWORD),
+            ("time", wintypes.DWORD),
+            ("dwExtraInfo", ctypes.c_void_p),
+        ]
+
+    LowLevelKeyboardProc = ctypes.WINFUNCTYPE(
+        ctypes.c_int,
+        ctypes.c_int,
+        wintypes.WPARAM,
+        wintypes.LPARAM,
+    )
+
+    def _low_level_keyboard_proc(nCode, wParam, lParam):
+        if nCode == 0 and wParam in (WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP):
+            kb = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
+            if kb.vkCode == VK_ESCAPE:
+                if wParam in (WM_KEYDOWN, WM_SYSKEYDOWN):
+                    _close_all()
+                return 1
+        return ctypes.windll.user32.CallNextHookEx(None, nCode, wParam, lParam)
+
+    def _install_escape_hook() -> None:
+        global _keyboard_hook, _keyboard_proc
+        if _keyboard_hook is not None:
+            return
+        if _keyboard_proc is None:
+            _keyboard_proc = LowLevelKeyboardProc(_low_level_keyboard_proc)
+        _keyboard_hook = ctypes.windll.user32.SetWindowsHookExW(
+            WH_KEYBOARD_LL,
+            _keyboard_proc,
+            ctypes.windll.kernel32.GetModuleHandleW(None),
+            0,
+        )
+
+    def _remove_escape_hook() -> None:
+        global _keyboard_hook
+        if _keyboard_hook is None:
+            return
+        ctypes.windll.user32.UnhookWindowsHookEx(_keyboard_hook)
+        _keyboard_hook = None
+else:
+    def _install_escape_hook() -> None:
+        pass
+
+    def _remove_escape_hook() -> None:
         pass
 
 
@@ -430,6 +501,7 @@ def _close_all():
                 app.removeEventFilter(_escape_filter)
     except Exception:
         pass
+    _remove_escape_hook()
     _escape_filter = None
 
 
@@ -506,8 +578,9 @@ def show_overlay() -> None:
         QTimer.singleShot(100, lambda card=selected_card: card.activateWindow())
         QTimer.singleShot(100, lambda card=selected_card: card.setFocus())
 
-        # Install an application-level event filter to swallow Escape
-        # while the overlay is active so fullscreen apps aren't exited.
+        # Install an application-level event filter and a Windows low-level
+        # keyboard hook so ESC dismisses the overlay but does not exit
+        # fullscreen apps.
         global _escape_filter
         try:
             app = QGuiApplication.instance()
@@ -516,14 +589,7 @@ def show_overlay() -> None:
                 app.installEventFilter(_escape_filter)
         except Exception:
             _escape_filter = None
-
-    _open_windows.extend(blockers)
-    _open_windows.extend(cats)
-    _open_windows.extend(cards)
-
-    # Auto-dismiss — tracked so an early dismiss can cancel it (otherwise
-    # a stale timer from this show would later close a future overlay).
-    # OVERLAY_DURATION_MS <= 0 means "never auto-close" — user must press
+        _install_escape_hook()
     # ESC or click the dismiss button.
     if cfg.OVERLAY_DURATION_MS > 0:
         _auto_dismiss_timer = QTimer()
