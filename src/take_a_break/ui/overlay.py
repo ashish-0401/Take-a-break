@@ -56,6 +56,7 @@ def _exclude_from_capture(widget: QWidget) -> None:
 # Low-level Windows keyboard hook used while the overlay is active.
 _keyboard_hook = None
 _keyboard_proc = None
+_keyboard_grabber: QWidget | None = None
 
 if ctypes is not None:
     WH_KEYBOARD_LL = 13
@@ -501,7 +502,17 @@ def _close_all():
                 app.removeEventFilter(_escape_filter)
     except Exception:
         pass
-    _remove_escape_hook()
+    # Release any keyboard grab we took when showing the overlay.
+    try:
+        global _keyboard_grabber
+        if _keyboard_grabber is not None:
+            try:
+                _keyboard_grabber.releaseKeyboard()
+            except Exception:
+                pass
+            _keyboard_grabber = None
+    except Exception:
+        pass
     _escape_filter = None
 
 
@@ -578,10 +589,10 @@ def show_overlay() -> None:
         QTimer.singleShot(100, lambda card=selected_card: card.activateWindow())
         QTimer.singleShot(100, lambda card=selected_card: card.setFocus())
 
-        # Install an application-level event filter and a Windows low-level
-        # keyboard hook so ESC dismisses the overlay but does not exit
+        # Install an application-level event filter and grab the keyboard on
+        # the selected card so ESC dismisses the overlay but doesn't reach
         # fullscreen apps.
-        global _escape_filter
+        global _escape_filter, _keyboard_grabber
         try:
             app = QGuiApplication.instance()
             if app is not None:
@@ -589,7 +600,11 @@ def show_overlay() -> None:
                 app.installEventFilter(_escape_filter)
         except Exception:
             _escape_filter = None
-        _install_escape_hook()
+        try:
+            selected_card.grabKeyboard()
+            _keyboard_grabber = selected_card
+        except Exception:
+            _keyboard_grabber = None
     # ESC or click the dismiss button.
     if cfg.OVERLAY_DURATION_MS > 0:
         _auto_dismiss_timer = QTimer()
