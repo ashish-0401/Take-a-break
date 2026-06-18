@@ -11,14 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-try:
-    import ctypes
-    from ctypes import wintypes
-except Exception:  # pragma: no cover
-    ctypes = None
-    wintypes = None
-
-from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve, QObject, QEvent
+from PySide6.QtCore import Qt, QTimer, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import (
     QGuiApplication, QImageReader, QPixmap, QColor, QPainter, QKeyEvent, QCursor,
 )
@@ -53,103 +46,8 @@ def _exclude_from_capture(widget: QWidget) -> None:
         pass
 
 
-# Low-level Windows keyboard hook used while the overlay is active.
-_keyboard_hook = None
-_keyboard_proc = None
-_keyboard_grabber: QWidget | None = None
-
-if ctypes is not None:
-    WH_KEYBOARD_LL = 13
-    WM_KEYDOWN = 0x0100
-    WM_KEYUP = 0x0101
-    WM_SYSKEYDOWN = 0x0104
-    WM_SYSKEYUP = 0x0105
-    VK_ESCAPE = 0x1B
-
-    class KBDLLHOOKSTRUCT(ctypes.Structure):
-        _fields_ = [
-            ("vkCode", wintypes.DWORD),
-            ("scanCode", wintypes.DWORD),
-            ("flags", wintypes.DWORD),
-            ("time", wintypes.DWORD),
-            ("dwExtraInfo", ctypes.c_void_p),
-        ]
-
-    LowLevelKeyboardProc = ctypes.WINFUNCTYPE(
-        ctypes.c_int,
-        ctypes.c_int,
-        wintypes.WPARAM,
-        wintypes.LPARAM,
-    )
-
-    def _low_level_keyboard_proc(nCode, wParam, lParam):
-        if nCode == 0 and wParam in (WM_KEYDOWN, WM_SYSKEYDOWN, WM_KEYUP, WM_SYSKEYUP):
-            kb = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
-            if kb.vkCode == VK_ESCAPE:
-                if wParam in (WM_KEYDOWN, WM_SYSKEYDOWN):
-                    _close_all()
-                return 1
-        return ctypes.windll.user32.CallNextHookEx(None, nCode, wParam, lParam)
-
-    def _install_escape_hook() -> None:
-        global _keyboard_hook, _keyboard_proc
-        if _keyboard_hook is not None:
-            return
-        if _keyboard_proc is None:
-            _keyboard_proc = LowLevelKeyboardProc(_low_level_keyboard_proc)
-        _keyboard_hook = ctypes.windll.user32.SetWindowsHookExW(
-            WH_KEYBOARD_LL,
-            _keyboard_proc,
-            ctypes.windll.kernel32.GetModuleHandleW(None),
-            0,
-        )
-
-    def _remove_escape_hook() -> None:
-        global _keyboard_hook
-        if _keyboard_hook is None:
-            return
-        ctypes.windll.user32.UnhookWindowsHookEx(_keyboard_hook)
-        _keyboard_hook = None
-else:
-    def _install_escape_hook() -> None:
-        pass
-
-    def _remove_escape_hook() -> None:
-        pass
-
-
 # ----- Currently-open windows (so they aren't garbage collected) -----
 _open_windows: list[QWidget] = []
-
-# Global escape filter instance while overlay is shown
-_escape_filter: QObject | None = None
-
-
-class _EscapeFilter(QObject):
-    """Application-level event filter that swallows Escape while overlay is open.
-
-    This prevents the Escape key from reaching a fullscreen application
-    (e.g. a browser video) and causes the overlay to dismiss on Escape.
-    """
-    def eventFilter(self, obj, event):
-        if not STATE.overlays_open:
-            return super().eventFilter(obj, event)
-        if event.type() == QEvent.KeyPress:
-            try:
-                if event.key() == Qt.Key.Key_Escape:
-                    _close_all()
-                    event.accept()
-                    return True
-            except Exception:
-                pass
-        elif event.type() == QEvent.KeyRelease:
-            try:
-                if event.key() == Qt.Key.Key_Escape:
-                    event.accept()
-                    return True
-            except Exception:
-                pass
-        return super().eventFilter(obj, event)
 
 
 def _play_sound() -> None:
@@ -265,21 +163,15 @@ class CatWindow(QWidget):
                 self._frame_idx = 0
                 speed = max(1, cfg.GIF_SPEED_PERCENT) / 100.0
 
-                self._gif_timer = QTimer(self)
-                self._gif_timer.setSingleShot(True)
-
                 def _advance():
-                    if not self.isVisible() or self._label is None:
-                        return
                     self._frame_idx = (self._frame_idx + 1) % len(self._frames)
-                    try:
-                        self._label.setPixmap(self._frames[self._frame_idx])
-                    except Exception:
-                        return
-                    self._gif_timer.start(int(self._delays[self._frame_idx] / speed))
+                    self._label.setPixmap(self._frames[self._frame_idx])
+                    QTimer.singleShot(
+                        int(self._delays[self._frame_idx] / speed),
+                        _advance,
+                    )
 
-                self._gif_timer.timeout.connect(_advance)
-                self._gif_timer.start(int(delays[0] / speed))
+                QTimer.singleShot(int(delays[0] / speed), _advance)
         else:
             # Fallback: still PNG
             still = Path(cfg.IMAGE_PATH)
@@ -295,13 +187,6 @@ class CatWindow(QWidget):
 
         # Pin the cat to the right edge, top-aligned.
         self._label.move(avail.width() - self._label.width(), 0)
-
-    def closeEvent(self, event):
-        if hasattr(self, '_gif_timer') and self._gif_timer is not None:
-            self._gif_timer.stop()
-            self._gif_timer.deleteLater()
-            self._gif_timer = None
-        super().closeEvent(event)
 
 
 # ============================================================
@@ -480,7 +365,6 @@ _auto_dismiss_timer: QTimer | None = None
 
 def _close_all():
     global _auto_dismiss_timer
-    global _escape_filter
     if _auto_dismiss_timer is not None:
         _auto_dismiss_timer.stop()
         _auto_dismiss_timer = None
@@ -494,26 +378,6 @@ def _close_all():
             w.deleteLater()
         except Exception:
             pass
-    # Remove the global escape event filter so ESC returns to normal behavior
-    try:
-        if _escape_filter is not None:
-            app = QGuiApplication.instance()
-            if app is not None:
-                app.removeEventFilter(_escape_filter)
-    except Exception:
-        pass
-    # Release any keyboard grab we took when showing the overlay.
-    try:
-        global _keyboard_grabber
-        if _keyboard_grabber is not None:
-            try:
-                _keyboard_grabber.releaseKeyboard()
-            except Exception:
-                pass
-            _keyboard_grabber = None
-    except Exception:
-        pass
-    _escape_filter = None
 
 
 def show_overlay() -> None:
@@ -589,22 +453,13 @@ def show_overlay() -> None:
         QTimer.singleShot(100, lambda card=selected_card: card.activateWindow())
         QTimer.singleShot(100, lambda card=selected_card: card.setFocus())
 
-        # Install an application-level event filter and grab the keyboard on
-        # the selected card so ESC dismisses the overlay but doesn't reach
-        # fullscreen apps.
-        global _escape_filter, _keyboard_grabber
-        try:
-            app = QGuiApplication.instance()
-            if app is not None:
-                _escape_filter = _EscapeFilter()
-                app.installEventFilter(_escape_filter)
-        except Exception:
-            _escape_filter = None
-        try:
-            selected_card.grabKeyboard()
-            _keyboard_grabber = selected_card
-        except Exception:
-            _keyboard_grabber = None
+    _open_windows.extend(blockers)
+    _open_windows.extend(cats)
+    _open_windows.extend(cards)
+
+    # Auto-dismiss — tracked so an early dismiss can cancel it (otherwise
+    # a stale timer from this show would later close a future overlay).
+    # OVERLAY_DURATION_MS <= 0 means "never auto-close" — user must press
     # ESC or click the dismiss button.
     if cfg.OVERLAY_DURATION_MS > 0:
         _auto_dismiss_timer = QTimer()
