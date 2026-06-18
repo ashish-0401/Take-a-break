@@ -61,8 +61,12 @@ def build(trigger: Callable[[], None], on_settings_saved: Callable[[], None] | N
 
     icon.setContextMenu(menu)
     # Left-click -> open Settings  (right-click -> context menu as usual)
-    icon.activated.connect(
-        lambda reason: open_settings(on_save=on_settings_saved)
-        if reason == QSystemTrayIcon.ActivationReason.Trigger else None
-    )
+    def on_activated(reason):
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            open_settings(on_save=on_settings_saved)
+
+    icon.activated.connect(on_activated)
     return icon

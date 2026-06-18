@@ -11,7 +11,7 @@ from typing import Callable
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor
 from PySide6.QtWidgets import (
-    QApplication, QButtonGroup, QCheckBox, QDialog, QDialogButtonBox,
+    QApplication, QButtonGroup, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
     QFormLayout, QGroupBox, QHBoxLayout, QLabel, QMessageBox, QPushButton,
     QRadioButton, QScrollArea, QSpinBox, QVBoxLayout, QWidget,
 )
@@ -19,6 +19,26 @@ from PySide6.QtWidgets import (
 from ..core import config as cfg
 
 _DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _to_12h(hour: int) -> tuple[int, str]:
+    if hour == 0 or hour == 24:
+        return 12, "AM"
+    if hour == 12:
+        return 12, "PM"
+    if hour < 12:
+        return hour, "AM"
+    return hour - 12, "PM"
+
+
+def _to_24h(hour12: int, period: str, is_end: bool = False) -> int:
+    if period == "AM":
+        if hour12 == 12:
+            return 24 if is_end else 0
+        return hour12
+    if hour12 == 12:
+        return 12
+    return hour12 + 12
 
 
 class SettingsDialog(QDialog):
@@ -89,19 +109,29 @@ class SettingsDialog(QDialog):
         hours_layout.setSpacing(8)
 
         self._start_spin = QSpinBox()
-        self._start_spin.setRange(0, 23)
+        self._start_spin.setRange(1, 12)
         self._start_spin.setSuffix(":00")
-        self._start_spin.setValue(cfg.WORK_START_HOUR)
+        start_hour12, start_period = _to_12h(cfg.WORK_START_HOUR)
+        self._start_spin.setValue(start_hour12)
+        self._start_ampm = QComboBox()
+        self._start_ampm.addItems(["AM", "PM"])
+        self._start_ampm.setCurrentText(start_period)
 
         self._end_spin = QSpinBox()
-        self._end_spin.setRange(1, 24)
+        self._end_spin.setRange(1, 12)
         self._end_spin.setSuffix(":00")
-        self._end_spin.setValue(cfg.WORK_END_HOUR)
+        end_hour12, end_period = _to_12h(cfg.WORK_END_HOUR)
+        self._end_spin.setValue(end_hour12)
+        self._end_ampm = QComboBox()
+        self._end_ampm.addItems(["AM", "PM"])
+        self._end_ampm.setCurrentText(end_period)
 
         hours_layout.addWidget(QLabel("From"))
         hours_layout.addWidget(self._start_spin)
+        hours_layout.addWidget(self._start_ampm)
         hours_layout.addWidget(QLabel("to"))
         hours_layout.addWidget(self._end_spin)
+        hours_layout.addWidget(self._end_ampm)
         hours_layout.addStretch()
         root.addWidget(hours_group)
 
@@ -174,23 +204,33 @@ class SettingsDialog(QDialog):
         self._duration_spin.valueChanged.connect(schedule_save)
         self._never_close_check.stateChanged.connect(schedule_save)
         self._start_spin.valueChanged.connect(schedule_save)
+        self._start_ampm.currentIndexChanged.connect(schedule_save)
         self._end_spin.valueChanged.connect(schedule_save)
+        self._end_ampm.currentIndexChanged.connect(schedule_save)
         for cb in self._day_checks:
             cb.stateChanged.connect(schedule_save)
         self._radio_all.toggled.connect(schedule_save)
         self._radio_primary.toggled.connect(schedule_save)
 
     def _autosave(self) -> None:
-        start = self._start_spin.value()
-        end = self._end_spin.value()
+        start = _to_24h(
+            self._start_spin.value(), self._start_ampm.currentText(), is_end=False
+        )
+        end = _to_24h(
+            self._end_spin.value(), self._end_ampm.currentText(), is_end=True
+        )
         if start >= end:
             # Mark the offending fields red but don't pop a dialog — the user
             # is still adjusting. Settings stay un-saved until valid.
             self._start_spin.setStyleSheet("border: 1px solid red;")
             self._end_spin.setStyleSheet("border: 1px solid red;")
+            self._start_ampm.setStyleSheet("border: 1px solid red;")
+            self._end_ampm.setStyleSheet("border: 1px solid red;")
             return
         self._start_spin.setStyleSheet("")
+        self._start_ampm.setStyleSheet("")
         self._end_spin.setStyleSheet("")
+        self._end_ampm.setStyleSheet("")
 
         data: dict = {
             "INTERVAL_MS": self._interval_spin.value() * 60_000,
@@ -242,5 +282,6 @@ class SettingsDialog(QDialog):
 
 
 def open_settings(on_save: Callable[[], None] | None = None) -> None:
+    cfg.reload()
     dlg = SettingsDialog(on_save=on_save)
     dlg.exec()

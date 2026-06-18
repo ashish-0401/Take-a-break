@@ -57,19 +57,26 @@ class _EscapeFilter(QObject):
     """Application-level event filter that swallows Escape while overlay is open.
 
     This prevents the Escape key from reaching a fullscreen application
-    (e.g. a browser video) and causing it to exit fullscreen when the
-    overlay is dismissed by ESC.
+    (e.g. a browser video) and causes the overlay to dismiss on Escape.
     """
     def eventFilter(self, obj, event):
         if not STATE.overlays_open:
             return super().eventFilter(obj, event)
-        if event.type() in (QEvent.KeyPress, QEvent.KeyRelease):
+        if event.type() == QEvent.KeyPress:
+            try:
+                if event.key() == Qt.Key.Key_Escape:
+                    _close_all()
+                    event.accept()
+                    return True
+            except Exception:
+                pass
+        elif event.type() == QEvent.KeyRelease:
             try:
                 if event.key() == Qt.Key.Key_Escape:
                     event.accept()
                     return True
             except Exception:
-                return False
+                pass
         return super().eventFilter(obj, event)
 
 
@@ -186,15 +193,21 @@ class CatWindow(QWidget):
                 self._frame_idx = 0
                 speed = max(1, cfg.GIF_SPEED_PERCENT) / 100.0
 
-                def _advance():
-                    self._frame_idx = (self._frame_idx + 1) % len(self._frames)
-                    self._label.setPixmap(self._frames[self._frame_idx])
-                    QTimer.singleShot(
-                        int(self._delays[self._frame_idx] / speed),
-                        _advance,
-                    )
+                self._gif_timer = QTimer(self)
+                self._gif_timer.setSingleShot(True)
 
-                QTimer.singleShot(int(delays[0] / speed), _advance)
+                def _advance():
+                    if not self.isVisible() or self._label is None:
+                        return
+                    self._frame_idx = (self._frame_idx + 1) % len(self._frames)
+                    try:
+                        self._label.setPixmap(self._frames[self._frame_idx])
+                    except Exception:
+                        return
+                    self._gif_timer.start(int(self._delays[self._frame_idx] / speed))
+
+                self._gif_timer.timeout.connect(_advance)
+                self._gif_timer.start(int(delays[0] / speed))
         else:
             # Fallback: still PNG
             still = Path(cfg.IMAGE_PATH)
@@ -210,6 +223,13 @@ class CatWindow(QWidget):
 
         # Pin the cat to the right edge, top-aligned.
         self._label.move(avail.width() - self._label.width(), 0)
+
+    def closeEvent(self, event):
+        if hasattr(self, '_gif_timer') and self._gif_timer is not None:
+            self._gif_timer.stop()
+            self._gif_timer.deleteLater()
+            self._gif_timer = None
+        super().closeEvent(event)
 
 
 # ============================================================

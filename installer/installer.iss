@@ -54,8 +54,16 @@ Type: filesandordirs; Name: "{userappdata}\take-a-break"
 ; ------------------------------------------------------------------
 [Code]
 var
-  SettingsPage: TInputQueryWizardPage;
+  SettingsPage: TWizardPage;
   DaysPage: TWizardPage;
+  IntervalEdit: TEdit;
+  StartHourCombo: TComboBox;
+  StartAmRadio: TRadioButton;
+  StartPmRadio: TRadioButton;
+  EndHourCombo: TComboBox;
+  EndAmRadio: TRadioButton;
+  EndPmRadio: TRadioButton;
+  DurationEdit: TEdit;
   DayChecks: array[0..6] of TCheckBox;
   ScreenAllRadio: TRadioButton;
   ScreenPrimaryRadio: TRadioButton;
@@ -67,20 +75,110 @@ var
   lbl: TLabel;
 begin
   // Page 1: interval + work hours
-  SettingsPage := CreateInputQueryPage(
+  SettingsPage := CreateCustomPage(
     wpSelectTasks,
     'Break Settings',
-    'Set up your break schedule',
-    'You can change these anytime from the tray icon → Settings.'
+    'Set up your break schedule'
   );
-  SettingsPage.Add('Interval (minutes between breaks):', False);
-  SettingsPage.Add('Work start hour (0–23):', False);
-  SettingsPage.Add('Work end hour (1–24):', False);
-  SettingsPage.Add('Auto-close after (seconds, 0 = never):', False);
-  SettingsPage.Values[0] := '30';
-  SettingsPage.Values[1] := '9';
-  SettingsPage.Values[2] := '18';
-  SettingsPage.Values[3] := '30';
+
+  lbl := TLabel.Create(SettingsPage);
+  lbl.Parent := SettingsPage.Surface;
+  lbl.Caption := 'You can change these anytime from the tray icon → Settings.';
+  lbl.Left := 0;
+  lbl.Top := 8;
+  lbl.Width := 380;
+
+  lbl := TLabel.Create(SettingsPage);
+  lbl.Parent := SettingsPage.Surface;
+  lbl.Caption := 'Interval (minutes between breaks):';
+  lbl.Left := 0;
+  lbl.Top := 32;
+  lbl.Width := 220;
+
+  IntervalEdit := TEdit.Create(SettingsPage);
+  IntervalEdit.Parent := SettingsPage.Surface;
+  IntervalEdit.Left := 230;
+  IntervalEdit.Top := 28;
+  IntervalEdit.Width := 100;
+  IntervalEdit.Text := '30';
+
+  lbl := TLabel.Create(SettingsPage);
+  lbl.Parent := SettingsPage.Surface;
+  lbl.Caption := 'Work start time:';
+  lbl.Left := 0;
+  lbl.Top := 64;
+  lbl.Width := 220;
+
+  StartHourCombo := TComboBox.Create(SettingsPage);
+  StartHourCombo.Parent := SettingsPage.Surface;
+  StartHourCombo.Left := 230;
+  StartHourCombo.Top := 60;
+  StartHourCombo.Width := 60;
+  StartHourCombo.Style := csDropDownList;
+  for i := 1 to 12 do
+    StartHourCombo.Items.Add(IntToStr(i));
+  StartHourCombo.ItemIndex := 8; // default 9
+
+  StartAmRadio := TRadioButton.Create(SettingsPage);
+  StartAmRadio.Parent := SettingsPage.Surface;
+  StartAmRadio.Caption := 'AM';
+  StartAmRadio.Left := 300;
+  StartAmRadio.Top := 60;
+  StartAmRadio.Width := 40;
+  StartAmRadio.Checked := True;
+
+  StartPmRadio := TRadioButton.Create(SettingsPage);
+  StartPmRadio.Parent := SettingsPage.Surface;
+  StartPmRadio.Caption := 'PM';
+  StartPmRadio.Left := 345;
+  StartPmRadio.Top := 60;
+  StartPmRadio.Width := 40;
+
+  lbl := TLabel.Create(SettingsPage);
+  lbl.Parent := SettingsPage.Surface;
+  lbl.Caption := 'Work end time:';
+  lbl.Left := 0;
+  lbl.Top := 100;
+  lbl.Width := 220;
+
+  EndHourCombo := TComboBox.Create(SettingsPage);
+  EndHourCombo.Parent := SettingsPage.Surface;
+  EndHourCombo.Left := 230;
+  EndHourCombo.Top := 96;
+  EndHourCombo.Width := 60;
+  EndHourCombo.Style := csDropDownList;
+  for i := 1 to 12 do
+    EndHourCombo.Items.Add(IntToStr(i));
+  EndHourCombo.ItemIndex := 5; // default 6
+
+  EndAmRadio := TRadioButton.Create(SettingsPage);
+  EndAmRadio.Parent := SettingsPage.Surface;
+  EndAmRadio.Caption := 'AM';
+  EndAmRadio.Left := 300;
+  EndAmRadio.Top := 96;
+  EndAmRadio.Width := 40;
+
+  EndPmRadio := TRadioButton.Create(SettingsPage);
+  EndPmRadio.Parent := SettingsPage.Surface;
+  EndPmRadio.Caption := 'PM';
+  EndPmRadio.Left := 345;
+  EndPmRadio.Top := 96;
+  EndPmRadio.Width := 40;
+  EndPmRadio.Checked := True;
+
+  lbl := TLabel.Create(SettingsPage);
+  lbl.Parent := SettingsPage.Surface;
+  lbl.Caption := 'Auto-close after (seconds, 0 = never):';
+  lbl.Left := 0;
+  lbl.Top := 136;
+  lbl.Width := 220;
+
+  DurationEdit := TEdit.Create(SettingsPage);
+  DurationEdit.Parent := SettingsPage.Surface;
+  DurationEdit.Left := 230;
+  DurationEdit.Top := 132;
+  DurationEdit.Width := 100;
+  DurationEdit.Text := '30';
 
   // Page 2: work days checkboxes
   DaysPage := CreateCustomPage(
@@ -132,6 +230,35 @@ begin
   ScreenPrimaryRadio.Width := 220;
 end;
 
+function ParseTimeCombo(const HourText: string; const IsPm: Boolean; const IsEnd: Boolean): Integer;
+var
+  Hour: Integer;
+begin
+  Hour := StrToIntDef(HourText, 12);
+  if (Hour < 1) or (Hour > 12) then
+    Hour := 12;
+
+  if not IsPm then
+  begin
+    if Hour = 12 then
+    begin
+      if IsEnd then
+        Result := 24
+      else
+        Result := 0;
+    end
+    else
+      Result := Hour;
+  end
+  else
+  begin
+    if Hour = 12 then
+      Result := 12
+    else
+      Result := Hour + 12;
+  end;
+end;
+
 function WriteUserConfig(): Boolean;
 var
   Dir, Path, DayList, S, ShowAll: string;
@@ -143,10 +270,10 @@ begin
   if not DirExists(Dir) then ForceDirectories(Dir);
   Path := Dir + '\config.json';
 
-  Interval := StrToIntDef(SettingsPage.Values[0], 30);
-  StartH   := StrToIntDef(SettingsPage.Values[1], 9);
-  EndH     := StrToIntDef(SettingsPage.Values[2], 18);
-  Duration := StrToIntDef(SettingsPage.Values[3], 30);
+  Interval := StrToIntDef(IntervalEdit.Text, 30);
+  StartH   := ParseTimeCombo(StartHourCombo.Text, StartPmRadio.Checked, False);
+  EndH     := ParseTimeCombo(EndHourCombo.Text, EndPmRadio.Checked, True);
+  Duration := StrToIntDef(DurationEdit.Text, 30);
 
   if ScreenAllRadio.Checked then
     ShowAll := 'true'

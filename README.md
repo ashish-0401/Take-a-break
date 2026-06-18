@@ -59,11 +59,15 @@ Left-click the tray icon to open the Settings window. You can change:
 
 - **Interval** — how often breaks fire (default: 30 min)
 - **Break duration** — how long the overlay stays before auto-dismissing, or _Never_ (only dismiss via ESC / button)
-- **Work hours** — start and end hour (breaks won't fire outside this window)
+- **Work hours** — start and end time in 12-hour format with AM/PM (breaks won't fire outside this window)
 - **Active days** — any combination including weekends or evenings
 - **Show break on** — _All screens_ or _Primary screen only_
 
 Changes auto-save as you make them — no Save button, no restart needed. Close the dialog when you're done. The dialog also has a **Quit app** button.
+
+Opening Settings from the tray icon reloads the latest config from disk, so installer-chosen values are reflected immediately in the running app.
+
+The installer settings wizard also uses 12-hour AM/PM time entry for work hours.
 
 For advanced tweaks (message text, animation speed, etc.) edit `%APPDATA%\take-a-break\config.json`:
 

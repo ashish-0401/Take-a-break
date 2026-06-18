@@ -70,6 +70,9 @@ try {
 
     New-Item -ItemType Directory -Force -Path dist-installer | Out-Null
     & $iscc installer\installer.iss
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup compilation failed with exit code $LASTEXITCODE"
+    }
 
     # The PyInstaller `dist\` and `build\` folders are just intermediates
     # used to produce the installer; delete them so only the user-facing

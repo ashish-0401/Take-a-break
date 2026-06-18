@@ -61,7 +61,7 @@ WORK_DAYS = frozenset({0, 1, 2, 3, 4})  # Mon..Fri
 # How long after the overlay appears to ignore keystrokes / clicks.
 # Prevents an in-flight Enter / Space / mouse click (you were typing
 # or clicking when the break popped up) from dismissing it instantly.
-INPUT_GRACE_MS = 700
+INPUT_GRACE_MS = 250
 
 # -------- Layout --------
 POPUP_BOTTOM_MARGIN_FRAC = 0.10       # card distance from bottom of work area
@@ -108,14 +108,20 @@ _OVERRIDABLE = {
     "INPUT_GRACE_MS", "SHOW_ON_ALL_SCREENS",
 }
 
-try:
-    if USER_CONFIG_PATH.is_file():
-        _user = json.loads(USER_CONFIG_PATH.read_text(encoding="utf-8"))
-        for _k, _v in _user.items():
-            if _k in _OVERRIDABLE:
-                if _k == "WORK_DAYS" and isinstance(_v, list):
-                    _v = frozenset(_v)
-                globals()[_k] = _v
-except Exception:
-    # Never let a bad user config crash the app.
-    pass
+def reload() -> None:
+    """Re-read %APPDATA%\take-a-break\config.json and apply overrides."""
+    try:
+        if USER_CONFIG_PATH.is_file():
+            _user = json.loads(USER_CONFIG_PATH.read_text(encoding="utf-8"))
+            for _k, _v in _user.items():
+                if _k in _OVERRIDABLE:
+                    if _k == "WORK_DAYS" and isinstance(_v, list):
+                        _v = frozenset(_v)
+                    globals()[_k] = _v
+    except Exception:
+        # Never let a bad user config crash the app.
+        pass
+
+
+# Load initial user overrides at import time.
+reload()
